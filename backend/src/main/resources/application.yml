@@ -11,6 +11,10 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 100MB
   security:
     oauth2:
       client:
@@ -30,6 +34,9 @@ server:
   # Takes the client address and scheme from X-Forwarded-* only when the request
   # comes directly from a private-network proxy.
   forward-headers-strategy: native
+  tomcat:
+    # Read an oversized upload to the end, so the client gets a 413 and not a dropped connection.
+    max-swallow-size: 110MB
   error:
     include-message: never
     include-stacktrace: never
@@ -64,6 +71,14 @@ app:
   encryption:
     # Base64-encoded 256-bit key. The application refuses to start without it.
     key: ${APP_ENCRYPTION_KEY}
+  storage:
+    # Any S3-compatible store. Leave the endpoint empty to use AWS S3.
+    endpoint: ${STORAGE_ENDPOINT:}
+    region: ${STORAGE_REGION:us-east-1}
+    bucket: ${STORAGE_BUCKET:gatekeeper-artifacts}
+    access-key: ${STORAGE_ACCESS_KEY}
+    secret-key: ${STORAGE_SECRET_KEY}
+    create-bucket: ${STORAGE_CREATE_BUCKET:false}
   staging:
     # Comma-separated. These domains and their subdomains can never be tested.
     production-domains: ${APP_PRODUCTION_DOMAINS:}

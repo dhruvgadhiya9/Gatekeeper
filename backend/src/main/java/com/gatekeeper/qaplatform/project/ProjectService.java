@@ -10,6 +10,7 @@ import com.gatekeeper.qaplatform.project.dto.CreateProjectRequest.DesignInput;
 import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse;
 import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse.DepartmentMappingResponse;
 import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse.DesignResponse;
+import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse.DesignUploadResponse;
 import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse.FeatureResponse;
 import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse.RepositoryResponse;
 import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse.TestAccountResponse;
@@ -28,6 +29,7 @@ public class ProjectService {
     private final ProjectRepository projects;
     private final RepoConnectionRepository repositories;
     private final DesignSourceRepository designSources;
+    private final DesignUploadRepository designUploads;
     private final TestAccountRepository testAccounts;
     private final FeatureSpecRepository features;
     private final DepartmentMappingRepository departmentMappings;
@@ -38,6 +40,7 @@ public class ProjectService {
             ProjectRepository projects,
             RepoConnectionRepository repositories,
             DesignSourceRepository designSources,
+            DesignUploadRepository designUploads,
             TestAccountRepository testAccounts,
             FeatureSpecRepository features,
             DepartmentMappingRepository departmentMappings,
@@ -46,6 +49,7 @@ public class ProjectService {
         this.projects = projects;
         this.repositories = repositories;
         this.designSources = designSources;
+        this.designUploads = designUploads;
         this.testAccounts = testAccounts;
         this.features = features;
         this.departmentMappings = departmentMappings;
@@ -111,6 +115,14 @@ public class ProjectService {
         return source;
     }
 
+    private DesignResponse toDesignResponse(DesignSource source) {
+        var uploadResponses = designUploads.findByDesignSourceIdOrderByFileNameAsc(source.getId()).stream()
+                .map(upload -> new DesignUploadResponse(
+                        upload.getId(), upload.getFileName(), upload.getContentType(), upload.getSizeBytes()))
+                .toList();
+        return new DesignResponse(source.getType(), source.getFigmaFileKey(), source.getToken() != null, uploadResponses);
+    }
+
     private ProjectDetailResponse toDetail(Project project) {
         UUID id = project.getId();
         return new ProjectDetailResponse(
@@ -123,7 +135,7 @@ public class ProjectService {
                 project.getCreatedAt(),
                 designSources.findByProjectId(id).stream()
                         .findFirst()
-                        .map(source -> new DesignResponse(source.getType(), source.getFigmaFileKey(), source.getToken() != null))
+                        .map(this::toDesignResponse)
                         .orElse(null),
                 repositories.findByProjectId(id).stream()
                         .map(repository -> new RepositoryResponse(
