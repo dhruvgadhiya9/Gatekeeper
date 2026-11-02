@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main, Develop]
+  pull_request:
+    branches: [main, Develop]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - run: ./mvnw -B verify
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: dependency-check-${{ github.run_id }}
+          restore-keys: dependency-check-
+      - name: Run OWASP Dependency-Check
+        run: ./mvnw -B -Pdependency-check -DskipTests verify
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: backend/target/dependency-check-report.*
