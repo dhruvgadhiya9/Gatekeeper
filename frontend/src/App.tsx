@@ -1,14 +1,22 @@
-import { BackendStatus } from "./components/BackendStatus";
+import { Route, Routes } from "react-router";
+import { ProtectedLayout } from "./auth/ProtectedLayout";
+import { RequireRole } from "./auth/RequireRole";
+import { HomePage } from "./pages/HomePage";
+import { LoginPage } from "./pages/LoginPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
+import { UsersPage } from "./pages/UsersPage";
 
 export default function App() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-4 px-4">
-      <h1 className="text-3xl font-semibold text-slate-900">Gatekeeper</h1>
-      <p className="text-slate-600">
-        Internal QA platform. Register a project, let AI agents test it, and get confirmed bugs
-        filed in Zoho Projects.
-      </p>
-      <BackendStatus />
-    </main>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<ProtectedLayout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route element={<RequireRole role="ADMIN" />}>
+          <Route path="/users" element={<UsersPage />} />
+        </Route>
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   );
 }
