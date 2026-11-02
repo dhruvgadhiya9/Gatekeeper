@@ -37,12 +37,17 @@ public class ProjectController {
     private final ProjectService projectService;
     private final FeatureCsvParser featureCsvParser;
     private final DesignUploadService designUploadService;
+    private final RepositoryAccessChecker repositoryAccess;
 
     public ProjectController(
-            ProjectService projectService, FeatureCsvParser featureCsvParser, DesignUploadService designUploadService) {
+            ProjectService projectService,
+            FeatureCsvParser featureCsvParser,
+            DesignUploadService designUploadService,
+            RepositoryAccessChecker repositoryAccess) {
         this.projectService = projectService;
         this.featureCsvParser = featureCsvParser;
         this.designUploadService = designUploadService;
+        this.repositoryAccess = repositoryAccess;
     }
 
     @PostMapping
@@ -50,6 +55,7 @@ public class ProjectController {
     @PreAuthorize("hasAnyRole('ADMIN', 'QA_LEAD')")
     public ProjectDetailResponse create(
             @Valid @RequestBody ProjectRequest request, @AuthenticationPrincipal AuthenticatedUser actor) {
+        repositoryAccess.check(request);
         return projectService.create(request, actor);
     }
 
@@ -68,6 +74,7 @@ public class ProjectController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'QA_LEAD')")
     public ProjectDetailResponse update(@PathVariable UUID id, @Valid @RequestBody ProjectRequest request) {
+        repositoryAccess.check(request);
         return projectService.update(id, request);
     }
 
