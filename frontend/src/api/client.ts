@@ -2,12 +2,19 @@ const CSRF_COOKIE = "XSRF-TOKEN";
 const CSRF_HEADER = "X-XSRF-TOKEN";
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+export interface FieldError {
+  field: string;
+  message: string;
+}
+
 export class ApiError extends Error {
   readonly status: number;
+  readonly fieldErrors: FieldError[];
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, fieldErrors: FieldError[] = []) {
     super(message);
     this.status = status;
+    this.fieldErrors = fieldErrors;
   }
 }
 
@@ -41,8 +48,16 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     onUnauthorized();
   }
   if (!response.ok) {
-    const problem: { detail?: string } = await response.json().catch(() => ({}));
-    throw new ApiError(response.status, problem.detail ?? "The request failed.");
+    const problem: { detail?: string; errors?: FieldError[] } = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, problem.detail ?? "The request failed.", problem.errors ?? []);
   }
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
+}
+
+export function postJson<T>(path: string, body: unknown): Promise<T> {
+  return api<T>(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }

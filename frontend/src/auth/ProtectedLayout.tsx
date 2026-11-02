@@ -34,6 +34,9 @@ function Header({ user }: { user: User }) {
           <NavLink to="/" end className={navLinkClass}>
             Home
           </NavLink>
+          <NavLink to="/projects" className={navLinkClass}>
+            Projects
+          </NavLink>
           {user.role === "ADMIN" && (
             <NavLink to="/users" className={navLinkClass}>
               Users

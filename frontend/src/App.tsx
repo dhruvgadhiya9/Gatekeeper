@@ -4,6 +4,9 @@ import { RequireRole } from "./auth/RequireRole";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { ProjectDetailPage } from "./pages/projects/ProjectDetailPage";
+import { ProjectListPage } from "./pages/projects/ProjectListPage";
+import { ProjectWizardPage } from "./pages/projects/wizard/ProjectWizardPage";
 import { UsersPage } from "./pages/UsersPage";
 
 export default function App() {
@@ -12,7 +15,12 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<HomePage />} />
-        <Route element={<RequireRole role="ADMIN" />}>
+        <Route path="/projects" element={<ProjectListPage />} />
+        <Route element={<RequireRole roles={["ADMIN", "QA_LEAD"]} />}>
+          <Route path="/projects/new" element={<ProjectWizardPage />} />
+        </Route>
+        <Route path="/projects/:id" element={<ProjectDetailPage />} />
+        <Route element={<RequireRole roles={["ADMIN"]} />}>
           <Route path="/users" element={<UsersPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
