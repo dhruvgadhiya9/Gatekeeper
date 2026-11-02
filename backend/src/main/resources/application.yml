@@ -11,13 +11,37 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  security:
+    oauth2:
+      client:
+        registration:
+          oidc:
+            provider: oidc
+            client-id: ${OIDC_CLIENT_ID}
+            client-secret: ${OIDC_CLIENT_SECRET}
+            scope: openid,profile,email
+            redirect-uri: ${PUBLIC_URL:http://localhost:5173}/login/oauth2/code/oidc
+        provider:
+          oidc:
+            issuer-uri: ${OIDC_ISSUER_URI}
 
 server:
   port: 8080
+  # Takes the client address and scheme from X-Forwarded-* only when the request
+  # comes directly from a private-network proxy.
+  forward-headers-strategy: native
   error:
     include-message: never
     include-stacktrace: never
     include-binding-errors: never
+  servlet:
+    session:
+      # The session only exists during the OIDC redirect; see SecurityConfig.
+      timeout: 10m
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${COOKIE_SECURE:true}
 
 management:
   endpoints:
@@ -40,3 +64,11 @@ app:
   encryption:
     # Base64-encoded 256-bit key. The application refuses to start without it.
     key: ${APP_ENCRYPTION_KEY}
+  auth:
+    public-url: ${PUBLIC_URL:http://localhost:5173}
+    # Base64-encoded key of at least 256 bits. Signs login tokens.
+    jwt-secret: ${APP_JWT_SECRET}
+    token-ttl: 1h
+    cookie-secure: ${COOKIE_SECURE:true}
+    admin-emails: ${APP_ADMIN_EMAILS:}
+    allowed-email-domains: ${APP_ALLOWED_EMAIL_DOMAINS:}

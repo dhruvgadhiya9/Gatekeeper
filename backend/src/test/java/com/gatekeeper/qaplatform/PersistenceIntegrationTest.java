@@ -24,30 +24,18 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Boots the full application against real PostgreSQL. Startup itself proves that the Flyway
  * migration matches every JPA entity, because Hibernate runs with {@code ddl-auto=validate}.
  */
-@SpringBootTest(properties = "app.encryption.key=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=")
-@AutoConfigureMockMvc
-@Testcontainers
-class PersistenceIntegrationTest {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+class PersistenceIntegrationTest extends IntegrationTestBase {
 
     @Autowired private ProjectRepository projects;
     @Autowired private TestAccountRepository testAccounts;
@@ -138,6 +126,7 @@ class PersistenceIntegrationTest {
     }
 
     @Test
+    @WithMockUser
     void openApiDocsAreServed() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.get("/api/docs"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
