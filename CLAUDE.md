@@ -78,7 +78,7 @@ com.gatekeeper.qaplatform
 - Project(id, name, zohoPortalId, zohoProjectId, stagingUrl, createdBy, ...)
 - RepoConnection(id, projectId, type[FRONTEND|BACKEND|OTHER], provider, repoFullName, defaultBranch, installationId)
 - DesignSource(id, projectId, type[FIGMA|UPLOAD], figmaFileKey, encryptedToken)
-- DesignUpload(id, designSourceId, fileName, storageKey, contentType, sizeBytes)
+- DesignUpload(id, designSourceId, fileName, storageKey, contentType, sizeBytes, figmaNodeId)
 - TestAccount(id, projectId, role, username, encryptedPassword, loginUrl)
 - FeatureSpec(id, projectId, title, description, acceptanceCriteria, priority)
 - TestPlan(id, runId, markdown, status[DRAFT|APPROVED|REJECTED], approvedBy)
@@ -135,6 +135,12 @@ lead as follower, and (setting) require QA_LEAD approval before creating in Zoho
   where its resolver finds a token. `AuthIntegrationTest` guards this.
 - Annotate security-relevant service methods with `@Audited`. Never put secrets in its details.
 - Runner job tokens (Phase 6) are separate from login tokens and must not be accepted as them.
+
+## External calls
+- Annotate public client methods with `@Retry` and `@CircuitBreaker`. Only temporary failures count,
+  as configured in `application.yml`; a 4xx other than 429 is not a sign the service is down.
+- Don't call external services inside a database transaction.
+- Never log tokens or external error bodies. Tests assert this with `OutputCaptureExtension`.
 
 ## Coding rules
 - Constructor injection, records for DTOs, no entity objects in API responses.

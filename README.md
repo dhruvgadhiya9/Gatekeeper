@@ -15,9 +15,8 @@ report is generated.
 - Architecture and rules: `CLAUDE.md`
 - Branching and commit conventions: `CONTRIBUTING.md`
 
-**Status:** Phase 3 complete (skeleton, local environment, login, roles, audit log and project
-intake). Zoho IDs and repositories are typed in by hand until their integrations arrive in Phases
-4 and 5. Projects can't be edited or deleted yet.
+**Status:** Phase 4 complete (skeleton, local environment, login, roles, audit log, project intake
+and editing, GitHub App and Figma integrations). Zoho IDs are typed in by hand until Phase 5.
 
 ## Prerequisites
 
@@ -81,6 +80,29 @@ as a staging URL. With it empty, only local and cloud metadata addresses are ref
 
 The wizard's Features step accepts a CSV with the columns `title` (required), `description`,
 `acceptance_criteria` and `priority`, and links to a template.
+
+Admins and QA leads can edit a project. Password and token fields start empty, which keeps the
+stored values. If a login page moves to another site, its password must be entered again. Only
+admins can delete a project, and a project with test runs can't be deleted.
+
+## Connect GitHub
+
+Until this is done, the wizard takes repositories typed as `owner/repository`.
+
+1. Create a GitHub App in your organization's developer settings. Its webhook can stay inactive.
+2. Give it these repository permissions: **Contents: Read**, **Metadata: Read**, **Pull requests: Read and write**.
+3. Generate a private key, and install the App on the repositories to be tested.
+4. Set `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY` in `infra/.env` (`.env.example` shows how to
+   encode the key), then restart the backend.
+
+The wizard then offers accounts and repositories to choose from. Existing projects must choose
+theirs the next time they're edited.
+
+## Use Figma designs
+
+Create a Figma personal access token with the **File content: Read** scope (`file_content:read`),
+and enter it with the file's link in the wizard's Design step. On the project page, **Choose frames
+from Figma** then stores the chosen frames as PNG images for comparison.
 
 ## Run the backend and frontend outside Docker
 
