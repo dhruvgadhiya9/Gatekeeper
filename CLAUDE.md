@@ -74,6 +74,7 @@ com.gatekeeper.qaplatform
 10. Dependencies pinned; run OWASP Dependency-Check in CI.
 
 ## Domain model (initial)
+- AppUser(id, issuer, subject, email, displayName, role[ADMIN|QA_LEAD|VIEWER], enabled, lastLoginAt)
 - Project(id, name, zohoPortalId, zohoProjectId, stagingUrl, createdBy, ...)
 - RepoConnection(id, projectId, type[FRONTEND|BACKEND|OTHER], provider, repoFullName, defaultBranch, installationId)
 - DesignSource(id, projectId, type[FIGMA|UPLOAD], figmaFileKey, encryptedToken)
@@ -124,6 +125,15 @@ lead as follower, and (setting) require QA_LEAD approval before creating in Zoho
   attachments create.
 - Every Zoho write goes through ZohoAssignmentService, is idempotent (fingerprint
   stored in our DB before the call), retried with backoff, and audited.
+
+## Authentication
+- The backend is the OIDC client, with a configurable issuer. After login it issues its own JWT
+  in an HttpOnly cookie and ends the temporary session. The JWT holds only the user id; role and
+  enabled status come from the database on each request.
+- Do not use Spring's `oauth2ResourceServer` for this cookie: it turns CSRF off for any request
+  where its resolver finds a token. `AuthIntegrationTest` guards this.
+- Annotate security-relevant service methods with `@Audited`. Never put secrets in its details.
+- Runner job tokens (Phase 6) are separate from login tokens and must not be accepted as them.
 
 ## Coding rules
 - Constructor injection, records for DTOs, no entity objects in API responses.
