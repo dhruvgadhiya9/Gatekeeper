@@ -22,7 +22,10 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
@@ -61,10 +64,17 @@ public class SecurityConfig {
             ProblemResponseWriter problems,
             AuditService audit,
             RateLimitProperties rateLimits,
-            Clock clock)
+            Clock clock,
+            ClientRegistrationRepository clientRegistrations)
             throws Exception {
         CookieCsrfTokenRepository csrfTokens = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfTokens.setCookieCustomizer(cookie -> cookie.secure(properties.cookieSecure()).sameSite("Lax"));
+
+        // Spring only sends PKCE for public clients by default. It also protects confidential ones
+        // from authorization code interception, and strict providers require it.
+        var authorizationRequests =
+                new DefaultOAuth2AuthorizationRequestResolver(clientRegistrations, "/oauth2/authorization");
+        authorizationRequests.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
 
         http.authorizeHttpRequests(requests -> requests
                         .requestMatchers("/actuator/health/**", "/error").permitAll()
@@ -82,6 +92,7 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .oauth2Login(login -> login
                         .loginPage("/login")
+                        .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(authorizationRequests))
                         // Keep the provider's tokens in the session that is about to end. The default
                         // holds them in memory indefinitely, and Gatekeeper never uses them.
                         .authorizedClientRepository(new HttpSessionOAuth2AuthorizedClientRepository())

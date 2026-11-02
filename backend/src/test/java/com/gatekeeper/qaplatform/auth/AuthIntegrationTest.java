@@ -186,12 +186,14 @@ class AuthIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
-    void loginStartRedirectsToProviderWithStateAndNonce() throws Exception {
+    void loginStartRedirectsToProviderWithStateNonceAndPkce() throws Exception {
         mockMvc.perform(get("/oauth2/authorization/oidc"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string(HttpHeaders.LOCATION, startsWith("https://idp.example.test/authorize")))
                 .andExpect(header().string(HttpHeaders.LOCATION, containsString("state=")))
-                .andExpect(header().string(HttpHeaders.LOCATION, containsString("nonce=")));
+                .andExpect(header().string(HttpHeaders.LOCATION, containsString("nonce=")))
+                .andExpect(header().string(HttpHeaders.LOCATION, containsString("code_challenge=")))
+                .andExpect(header().string(HttpHeaders.LOCATION, containsString("code_challenge_method=S256")));
     }
 
     @Test

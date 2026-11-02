@@ -10,6 +10,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
 
@@ -30,7 +31,10 @@ public class OidcLoginFailureHandler implements AuthenticationFailureHandler {
     public void onAuthenticationFailure(
             HttpServletRequest request, HttpServletResponse response, AuthenticationException exception)
             throws IOException, ServletException {
-        String reason = exception.getClass().getSimpleName();
+        // The OAuth error code, such as invalid_request, is a fixed value that says why login failed.
+        String reason = exception instanceof OAuth2AuthenticationException oauth
+                ? oauth.getError().getErrorCode()
+                : exception.getClass().getSimpleName();
         log.warn("OIDC login failed: {}", reason);
         audit.record("anonymous", "LOGIN", null, Map.of("outcome", "FAILURE", "reason", reason));
         response.sendRedirect(properties.publicUrl() + "/login?error=login_failed");
