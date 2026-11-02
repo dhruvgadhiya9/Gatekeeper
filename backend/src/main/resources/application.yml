@@ -64,6 +64,9 @@ app:
   encryption:
     # Base64-encoded 256-bit key. The application refuses to start without it.
     key: ${APP_ENCRYPTION_KEY}
+  rate-limit:
+    login-per-minute: 30
+    run-start-per-minute: 10
   auth:
     public-url: ${PUBLIC_URL:http://localhost:5173}
     # Base64-encoded key of at least 256 bits. Signs login tokens.

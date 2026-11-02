@@ -9,6 +9,9 @@ import com.gatekeeper.qaplatform.auth.JwtTokenService;
 import com.gatekeeper.qaplatform.auth.OidcLoginFailureHandler;
 import com.gatekeeper.qaplatform.auth.OidcLoginSuccessHandler;
 import com.gatekeeper.qaplatform.common.error.ProblemResponseWriter;
+import com.gatekeeper.qaplatform.common.ratelimit.FixedWindowRateLimiter;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import org.springframework.context.annotation.Bean;
@@ -56,7 +59,9 @@ public class SecurityConfig {
             OidcLoginSuccessHandler loginSuccessHandler,
             OidcLoginFailureHandler loginFailureHandler,
             ProblemResponseWriter problems,
-            AuditService audit)
+            AuditService audit,
+            RateLimitProperties rateLimits,
+            Clock clock)
             throws Exception {
         CookieCsrfTokenRepository csrfTokens = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfTokens.setCookieCustomizer(cookie -> cookie.secure(properties.cookieSecure()).sameSite("Lax"));
@@ -99,7 +104,10 @@ public class SecurityConfig {
                                 problems.write(response, HttpStatus.FORBIDDEN, "You do not have permission to do this.")))
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
                 // Runs before logout so that the logout handlers can see who is signing out.
-                .addFilterBefore(new JwtCookieAuthenticationFilter(authCookies, tokens, users), LogoutFilter.class);
+                .addFilterBefore(new JwtCookieAuthenticationFilter(authCookies, tokens, users), LogoutFilter.class)
+                .addFilterAfter(
+                        new RateLimitFilter(new FixedWindowRateLimiter(clock, Duration.ofMinutes(1)), rateLimits, problems),
+                        JwtCookieAuthenticationFilter.class);
         return http.build();
     }
 
