@@ -50,6 +50,37 @@ server:
         same-site: lax
         secure: ${COOKIE_SECURE:true}
 
+# Only temporary failures count: a 404 or 403 isn't a sign that the other service is down.
+resilience4j:
+  retry:
+    configs:
+      external:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.HttpClientErrorException$TooManyRequests
+    instances:
+      github:
+        base-config: external
+  circuitbreaker:
+    configs:
+      external:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        record-exceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.HttpClientErrorException$TooManyRequests
+    instances:
+      github:
+        base-config: external
+
 management:
   endpoints:
     web:
@@ -79,6 +110,14 @@ app:
     access-key: ${STORAGE_ACCESS_KEY}
     secret-key: ${STORAGE_SECRET_KEY}
     create-bucket: ${STORAGE_CREATE_BUCKET:false}
+  github:
+    # Leave the App ID empty until the GitHub App exists. The wizard then falls back to typed repositories.
+    app-id: ${GITHUB_APP_ID:}
+    # Base64-encoded PEM private key of the GitHub App.
+    private-key: ${GITHUB_APP_PRIVATE_KEY:}
+    api-url: ${GITHUB_API_URL:https://api.github.com}
+    web-url: ${GITHUB_WEB_URL:https://github.com}
+    api-version: "2026-03-10"
   staging:
     # Comma-separated. These domains and their subdomains can never be tested.
     production-domains: ${APP_PRODUCTION_DOMAINS:}

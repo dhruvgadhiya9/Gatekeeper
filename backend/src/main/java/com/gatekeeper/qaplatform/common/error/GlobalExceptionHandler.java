@@ -1,5 +1,6 @@
 package com.gatekeeper.qaplatform.common.error;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import org.slf4j.Logger;
@@ -14,6 +15,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
@@ -45,6 +48,28 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     ProblemDetail handleAccessDenied(AccessDeniedException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "You do not have permission to do this.");
+    }
+
+    @ExceptionHandler(ServiceNotConfiguredException.class)
+    ProblemDetail handleNotConfigured(ServiceNotConfiguredException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+    }
+
+    /** The circuit breaker is open because the other service keeps failing. */
+    @ExceptionHandler(CallNotPermittedException.class)
+    ProblemDetail handleCircuitOpen(CallNotPermittedException ex) {
+        log.warn("Call blocked: {}", ex.getCausingCircuitBreakerName());
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE, "An external service is unavailable. Try again shortly.");
+    }
+
+    /** Logs only the type and status, because external error bodies aren't under our control. */
+    @ExceptionHandler(RestClientException.class)
+    ProblemDetail handleExternalFailure(RestClientException ex) {
+        String status = ex instanceof RestClientResponseException response ? String.valueOf(response.getStatusCode()) : "none";
+        log.warn("External call failed: {} status={}", ex.getClass().getSimpleName(), status);
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_GATEWAY, "An external service returned an error. Try again shortly.");
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
