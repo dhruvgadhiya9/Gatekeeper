@@ -1,5 +1,6 @@
 package com.gatekeeper.qaplatform.auth;
 
+import com.gatekeeper.qaplatform.audit.Audited;
 import com.gatekeeper.qaplatform.common.error.ConflictException;
 import com.gatekeeper.qaplatform.common.error.ResourceNotFoundException;
 import com.gatekeeper.qaplatform.config.AuthProperties;
@@ -67,6 +68,7 @@ public class UserService {
     }
 
     /** Admins cannot change their own account, so the last admin can never lock everyone out. */
+    @Audited(action = "USER_UPDATE", target = "#id", details = "{role: #role, enabled: #enabled}")
     @Transactional
     public AppUser update(UUID id, Role role, boolean enabled, AuthenticatedUser actor) {
         if (id.equals(actor.id())) {

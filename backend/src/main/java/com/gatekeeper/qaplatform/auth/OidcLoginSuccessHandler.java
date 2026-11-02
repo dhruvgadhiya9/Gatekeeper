@@ -1,11 +1,13 @@
 package com.gatekeeper.qaplatform.auth;
 
+import com.gatekeeper.qaplatform.audit.AuditService;
 import com.gatekeeper.qaplatform.config.AuthProperties;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.Map;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
@@ -20,13 +22,19 @@ public class OidcLoginSuccessHandler implements AuthenticationSuccessHandler {
     private final JwtTokenService tokens;
     private final AuthCookies cookies;
     private final AuthProperties properties;
+    private final AuditService audit;
 
     public OidcLoginSuccessHandler(
-            UserService userService, JwtTokenService tokens, AuthCookies cookies, AuthProperties properties) {
+            UserService userService,
+            JwtTokenService tokens,
+            AuthCookies cookies,
+            AuthProperties properties,
+            AuditService audit) {
         this.userService = userService;
         this.tokens = tokens;
         this.cookies = cookies;
         this.properties = properties;
+        this.audit = audit;
     }
 
     @Override
@@ -34,11 +42,15 @@ public class OidcLoginSuccessHandler implements AuthenticationSuccessHandler {
             HttpServletRequest request, HttpServletResponse response, Authentication authentication)
             throws IOException, ServletException {
         endTemporarySession(request);
+        OidcIdentity identity = toIdentity((OidcUser) authentication.getPrincipal());
         try {
-            AppUser user = userService.recordLogin(toIdentity((OidcUser) authentication.getPrincipal()));
+            AppUser user = userService.recordLogin(identity);
+            audit.record(user.getEmail(), "LOGIN", user.getId().toString(), Map.of("outcome", "SUCCESS"));
             cookies.write(response, tokens.issue(user.getId()));
             response.sendRedirect(properties.publicUrl() + "/");
         } catch (LoginRejectedException e) {
+            String actor = identity.email() != null ? identity.email() : identity.subject();
+            audit.record(actor, "LOGIN", null, Map.of("outcome", "REJECTED", "reason", e.getMessage()));
             response.sendRedirect(properties.publicUrl() + "/login?error=" + e.getMessage());
         }
     }

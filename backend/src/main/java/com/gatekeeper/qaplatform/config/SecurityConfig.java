@@ -1,13 +1,16 @@
 package com.gatekeeper.qaplatform.config;
 
+import com.gatekeeper.qaplatform.audit.AuditService;
 import com.gatekeeper.qaplatform.auth.AppUserRepository;
 import com.gatekeeper.qaplatform.auth.AuthCookies;
+import com.gatekeeper.qaplatform.auth.AuthenticatedUser;
 import com.gatekeeper.qaplatform.auth.JwtCookieAuthenticationFilter;
 import com.gatekeeper.qaplatform.auth.JwtTokenService;
 import com.gatekeeper.qaplatform.auth.OidcLoginFailureHandler;
 import com.gatekeeper.qaplatform.auth.OidcLoginSuccessHandler;
 import com.gatekeeper.qaplatform.common.error.ProblemResponseWriter;
 import java.util.List;
+import java.util.Map;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -52,7 +55,8 @@ public class SecurityConfig {
             AppUserRepository users,
             OidcLoginSuccessHandler loginSuccessHandler,
             OidcLoginFailureHandler loginFailureHandler,
-            ProblemResponseWriter problems)
+            ProblemResponseWriter problems,
+            AuditService audit)
             throws Exception {
         CookieCsrfTokenRepository csrfTokens = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfTokens.setCookieCustomizer(cookie -> cookie.secure(properties.cookieSecure()).sameSite("Lax"));
@@ -80,7 +84,13 @@ public class SecurityConfig {
                         .failureHandler(loginFailureHandler))
                 .logout(logout -> logout
                         .logoutUrl("/api/auth/logout")
-                        .addLogoutHandler((request, response, authentication) -> authCookies.clear(response))
+                        .addLogoutHandler((request, response, authentication) -> {
+                            authCookies.clear(response);
+                            if (authentication != null
+                                    && authentication.getPrincipal() instanceof AuthenticatedUser user) {
+                                audit.record(user.email(), "LOGOUT", user.id().toString(), Map.of("outcome", "SUCCESS"));
+                            }
+                        })
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)))
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, exception) ->
