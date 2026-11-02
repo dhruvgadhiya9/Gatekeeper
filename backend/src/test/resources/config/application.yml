@@ -12,3 +12,5 @@ app:
     public-url: https://gatekeeper.example.test
     cookie-secure: true
     admin-emails: boss@example.test
+  staging:
+    production-domains: corp.example,shop.example

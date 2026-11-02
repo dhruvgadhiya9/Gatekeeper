@@ -16,7 +16,10 @@ public @interface Audited {
     /** The action name, for example {@code USER_UPDATE}. */
     String action();
 
-    /** SpEL over the method parameters that gives the target, for example {@code #id}. */
+    /**
+     * SpEL over the method parameters that gives the target, for example {@code #id}. The return
+     * value is available as {@code #result}, which is null if the method failed.
+     */
     String target() default "";
 
     /** SpEL inline map of extra details, for example {@code {role: #role}}. Never include secrets. */

@@ -38,25 +38,27 @@ public class AuditAspect {
     public Object audit(ProceedingJoinPoint joinPoint, Audited audited) throws Throwable {
         try {
             Object result = joinPoint.proceed();
-            record(joinPoint, audited, "SUCCESS", null);
+            record(joinPoint, audited, result, "SUCCESS", null);
             return result;
         } catch (Throwable failure) {
-            record(joinPoint, audited, "FAILURE", failure.getClass().getSimpleName());
+            record(joinPoint, audited, null, "FAILURE", failure.getClass().getSimpleName());
             throw failure;
         }
     }
 
     /** The action has already happened, so an audit problem must not change its result. */
-    private void record(ProceedingJoinPoint joinPoint, Audited audited, String outcome, String error) {
+    private void record(
+            ProceedingJoinPoint joinPoint, Audited audited, Object result, String outcome, String error) {
         try {
             var context = new MethodBasedEvaluationContext(
                     null,
                     ((MethodSignature) joinPoint.getSignature()).getMethod(),
                     joinPoint.getArgs(),
                     parameterNames);
-            String target = audited.target().isEmpty()
-                    ? null
-                    : String.valueOf(parser.parseExpression(audited.target()).getValue(context));
+            context.setVariable("result", result);
+            Object targetValue =
+                    audited.target().isEmpty() ? null : parser.parseExpression(audited.target()).getValue(context);
+            String target = targetValue == null ? null : targetValue.toString();
 
             Map<String, Object> details = new HashMap<>();
             if (!audited.details().isEmpty()) {

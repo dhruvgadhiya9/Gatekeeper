@@ -18,15 +18,13 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
- * Maps exceptions to RFC 7807 problem details. Responses never include internal
- * messages, because those can contain SQL fragments or submitted values.
+ * Maps exceptions to RFC 7807 problem details. Responses never include internal messages or
+ * submitted values, because those can contain SQL fragments or credentials.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
-    public record FieldViolation(String field, String message) {}
 
     @ExceptionHandler(ResourceNotFoundException.class)
     ProblemDetail handleNotFound(ResourceNotFoundException ex) {
@@ -36,6 +34,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     ProblemDetail handleConflict(ConflictException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler(RequestValidationException.class)
+    ProblemDetail handleRequestValidation(RequestValidationException ex) {
+        return validationProblem(ex.violations());
     }
 
     /** Thrown by method security such as {@code @PreAuthorize}. Without this it would become a 500. */
