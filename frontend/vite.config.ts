@@ -2,7 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-const backendUrl = "http://localhost:8080";
+const backendUrl = "http://localhost:8081";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
