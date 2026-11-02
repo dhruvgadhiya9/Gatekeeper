@@ -15,8 +15,16 @@ public class DesignUpload extends BaseEntity {
     private String storageKey;
     private String contentType;
     private long sizeBytes;
+    private String figmaNodeId;
 
     protected DesignUpload() {}
+
+    public static DesignUpload fromFigma(
+            UUID designSourceId, String fileName, String storageKey, long sizeBytes, String figmaNodeId) {
+        DesignUpload upload = new DesignUpload(designSourceId, fileName, storageKey, "image/png", sizeBytes);
+        upload.figmaNodeId = figmaNodeId;
+        return upload;
+    }
 
     public DesignUpload(UUID designSourceId, String fileName, String storageKey, String contentType, long sizeBytes) {
         this.designSourceId = designSourceId;

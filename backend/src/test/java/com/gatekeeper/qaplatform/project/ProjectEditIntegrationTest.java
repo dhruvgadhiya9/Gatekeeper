@@ -205,6 +205,26 @@ class ProjectEditIntegrationTest extends IntegrationTestBase {
     }
 
     @Test
+    void pointingAtAnotherFigmaFileRemovesFramesExportedFromTheOldOne() throws Exception {
+        DesignSource source = designSources.findByProjectId(projectId).getFirst();
+        String key = "projects/" + projectId + "/design/frame.png";
+        storage.put(key, new ByteArrayInputStream(new byte[1]), 1, "image/png");
+        designUploads.save(DesignUpload.fromFigma(source.getId(), "Home.png", key, 1, "1:2"));
+
+        update(request -> {}).andExpect(status().isOk());
+        assertThat(storage.objects).containsKey(key);
+
+        update(request -> {
+                    request.put("version", currentVersion());
+                    design(request).put("figmaUrl", "https://www.figma.com/design/NewFile/Other");
+                })
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.design.figmaFileKey").value("NewFile"))
+                .andExpect(jsonPath("$.design.uploads.length()").value(0));
+        assertThat(storage.objects).doesNotContainKey(key);
+    }
+
+    @Test
     void switchingToFigmaAlwaysNeedsAToken() throws Exception {
         update(request -> request.put("design", Map.of("type", "UPLOAD"))).andExpect(status().isOk());
 

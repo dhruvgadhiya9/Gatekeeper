@@ -66,6 +66,8 @@ resilience4j:
     instances:
       github:
         base-config: external
+      figma:
+        base-config: external
   circuitbreaker:
     configs:
       external:
@@ -79,6 +81,8 @@ resilience4j:
           - org.springframework.web.client.HttpClientErrorException$TooManyRequests
     instances:
       github:
+        base-config: external
+      figma:
         base-config: external
 
 management:
@@ -118,6 +122,8 @@ app:
     api-url: ${GITHUB_API_URL:https://api.github.com}
     web-url: ${GITHUB_WEB_URL:https://github.com}
     api-version: "2026-03-10"
+  figma:
+    api-url: ${FIGMA_API_URL:https://api.figma.com}
   staging:
     # Comma-separated. These domains and their subdomains can never be tested.
     production-domains: ${APP_PRODUCTION_DOMAINS:}
