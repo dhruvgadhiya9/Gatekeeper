@@ -1,0 +1,14 @@
+# Test-only values. classpath:/config/ is merged over the main application.yml.
+POSTGRES_USER: replaced-by-testcontainers
+POSTGRES_PASSWORD: replaced-by-testcontainers
+APP_ENCRYPTION_KEY: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+APP_JWT_SECRET: HyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4=
+OIDC_ISSUER_URI: https://idp.example.test
+OIDC_CLIENT_ID: test-client
+OIDC_CLIENT_SECRET: test-secret
+
+app:
+  auth:
+    public-url: https://gatekeeper.example.test
+    cookie-secure: true
+    admin-emails: boss@example.test
