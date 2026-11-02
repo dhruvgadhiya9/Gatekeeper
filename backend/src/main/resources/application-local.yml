@@ -1,0 +1,4 @@
+# Running the backend from an IDE or mvnw: reuse the docker-compose settings.
+spring:
+  config:
+    import: optional:file:../infra/.env[.properties]
