@@ -11,6 +11,7 @@ import java.util.UUID;
 /** Credentials never appear here. Only the fact that one is stored is reported. */
 public record ProjectDetailResponse(
         UUID id,
+        long version,
         String name,
         String zohoPortalId,
         String zohoProjectId,

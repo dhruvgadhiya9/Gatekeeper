@@ -12,9 +12,15 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import java.util.UUID;
 
-/** Everything the intake wizard collects, saved in one transaction. */
-public record CreateProjectRequest(
+/**
+ * Everything the intake wizard collects, saved in one transaction. Used to create and to edit.
+ *
+ * @param version the version the user was editing, required when updating so that changes made by
+ *     someone else in the meantime aren't overwritten
+ */
+public record ProjectRequest(
         @NotBlank @Size(max = 200) String name,
         @NotBlank @Pattern(regexp = ZOHO_ID, message = ZOHO_ID_MESSAGE) String zohoPortalId,
         @NotBlank @Pattern(regexp = ZOHO_ID, message = ZOHO_ID_MESSAGE) String zohoProjectId,
@@ -23,12 +29,16 @@ public record CreateProjectRequest(
         @NotBlank @Size(max = 2048) String stagingUrl,
         @NotNull @Size(max = 50) List<@NotNull @Valid TestAccountInput> testAccounts,
         @NotEmpty @Size(max = 500) List<@NotNull @Valid FeatureInput> features,
-        @NotEmpty @Size(max = 4) List<@NotNull @Valid DepartmentMappingInput> departmentMappings) {
+        @NotEmpty @Size(max = 4) List<@NotNull @Valid DepartmentMappingInput> departmentMappings,
+        Long version) {
 
     private static final String ZOHO_ID = "^$|[A-Za-z0-9_-]{1,64}";
     private static final String ZOHO_ID_MESSAGE = "must contain only letters, digits, hyphens and underscores";
 
-    /** @param figmaUrl and token are required for FIGMA and must be absent for UPLOAD */
+    /**
+     * @param figmaUrl required for FIGMA and must be absent for UPLOAD
+     * @param token required for a new Figma design; when editing, leave empty to keep the stored one
+     */
     public record DesignInput(
             @NotNull DesignSource.Type type, @Size(max = 2048) String figmaUrl, @Size(max = 512) String token) {
 
@@ -50,15 +60,24 @@ public record CreateProjectRequest(
                     String defaultBranch,
             @Positive Long installationId) {}
 
+    /**
+     * @param id set when editing an existing account
+     * @param password required for a new account; when editing, leave empty to keep the stored one
+     */
     public record TestAccountInput(
+            UUID id,
             @NotBlank @Size(max = 100) String role,
             @NotBlank @Size(max = 320) String username,
-            @NotBlank @Size(max = 1000) String password,
+            @Size(max = 1000) String password,
             @NotBlank @Size(max = 2048) String loginUrl) {
+
+        public boolean hasPassword() {
+            return password != null && !password.isBlank();
+        }
 
         @Override
         public String toString() {
-            return "TestAccountInput[role=" + role + ", username=" + username + ", password=***]";
+            return "TestAccountInput[id=" + id + ", role=" + role + ", username=" + username + ", password=***]";
         }
     }
 

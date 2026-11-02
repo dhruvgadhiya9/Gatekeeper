@@ -26,4 +26,9 @@ public class InMemoryObjectStorage implements ObjectStorage {
             throw new UncheckedIOException(e);
         }
     }
+
+    @Override
+    public void delete(String key) {
+        objects.remove(key);
+    }
 }

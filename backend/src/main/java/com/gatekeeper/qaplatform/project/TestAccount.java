@@ -41,8 +41,16 @@ public class TestAccount extends BaseEntity {
         return role;
     }
 
+    public void setRole(String role) {
+        this.role = role;
+    }
+
     public String getUsername() {
         return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getPassword() {
@@ -55,5 +63,9 @@ public class TestAccount extends BaseEntity {
 
     public String getLoginUrl() {
         return loginUrl;
+    }
+
+    public void setLoginUrl(String loginUrl) {
+        this.loginUrl = loginUrl;
     }
 }

@@ -3,17 +3,19 @@ package com.gatekeeper.qaplatform.project;
 import com.gatekeeper.qaplatform.common.error.FieldViolation;
 import com.gatekeeper.qaplatform.common.error.RequestValidationException;
 import com.gatekeeper.qaplatform.finding.Finding;
-import com.gatekeeper.qaplatform.project.dto.CreateProjectRequest;
-import com.gatekeeper.qaplatform.project.dto.CreateProjectRequest.DepartmentMappingInput;
-import com.gatekeeper.qaplatform.project.dto.CreateProjectRequest.DesignInput;
-import com.gatekeeper.qaplatform.project.dto.CreateProjectRequest.RepositoryInput;
-import com.gatekeeper.qaplatform.project.dto.CreateProjectRequest.TestAccountInput;
+import com.gatekeeper.qaplatform.project.dto.ProjectRequest;
+import com.gatekeeper.qaplatform.project.dto.ProjectRequest.DepartmentMappingInput;
+import com.gatekeeper.qaplatform.project.dto.ProjectRequest.DesignInput;
+import com.gatekeeper.qaplatform.project.dto.ProjectRequest.RepositoryInput;
+import com.gatekeeper.qaplatform.project.dto.ProjectRequest.TestAccountInput;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /** Rules that span several fields. Field-level rules are annotations on the request. */
@@ -23,6 +25,12 @@ public class ProjectRequestValidator {
     private static final Set<Finding.Category> REQUIRED_DEPARTMENTS = EnumSet.of(
             Finding.Category.DESIGN, Finding.Category.FRONTEND, Finding.Category.BACKEND, Finding.Category.SECURITY);
 
+    /** What an edit can keep from the saved project. A new project has none of this. */
+    public record Existing(Map<UUID, TestAccount> testAccounts, boolean figmaTokenStored) {
+
+        static final Existing NONE = new Existing(Map.of(), false);
+    }
+
     private final StagingUrlPolicy stagingUrls;
     private final FigmaUrlParser figmaUrls;
 
@@ -31,29 +39,34 @@ public class ProjectRequestValidator {
         this.figmaUrls = figmaUrls;
     }
 
+    public void validateNew(ProjectRequest request) {
+        validate(request, Existing.NONE);
+    }
+
     /** @throws RequestValidationException listing every problem, so the user can fix them together */
-    public void validate(CreateProjectRequest request) {
+    public void validate(ProjectRequest request, Existing existing) {
         List<FieldViolation> violations = new ArrayList<>();
         stagingUrls.findProblem(request.stagingUrl())
                 .ifPresent(problem -> violations.add(new FieldViolation("stagingUrl", problem)));
-        checkDesign(request.design(), violations);
+        checkDesign(request.design(), existing, violations);
         checkRepositories(request.repositories(), violations);
-        checkTestAccounts(request.testAccounts(), request.stagingUrl(), violations);
+        checkTestAccounts(request.testAccounts(), request.stagingUrl(), existing, violations);
         checkDepartments(request.departmentMappings(), violations);
         if (!violations.isEmpty()) {
             throw new RequestValidationException(violations);
         }
     }
 
-    private void checkDesign(DesignInput design, List<FieldViolation> violations) {
+    private void checkDesign(DesignInput design, Existing existing, List<FieldViolation> violations) {
         if (design == null) {
             return;
         }
+        boolean hasToken = design.token() != null && !design.token().isBlank();
         if (design.type() == DesignSource.Type.FIGMA) {
             if (figmaUrls.parseFileKey(design.figmaUrl()).isEmpty()) {
                 violations.add(new FieldViolation("design.figmaUrl", "must be a figma.com file or design link"));
             }
-            if (design.token() == null || design.token().isBlank()) {
+            if (!hasToken && !existing.figmaTokenStored()) {
                 violations.add(new FieldViolation("design.token", "must not be blank"));
             }
         } else if (design.figmaUrl() != null || design.token() != null) {
@@ -71,7 +84,7 @@ public class ProjectRequestValidator {
     }
 
     private void checkTestAccounts(
-            List<TestAccountInput> accounts, String stagingUrl, List<FieldViolation> violations) {
+            List<TestAccountInput> accounts, String stagingUrl, Existing existing, List<FieldViolation> violations) {
         Set<String> seen = new HashSet<>();
         for (int i = 0; i < accounts.size(); i++) {
             TestAccountInput account = accounts.get(i);
@@ -88,6 +101,22 @@ public class ProjectRequestValidator {
                                     path + ".loginUrl", "must be on the staging site or one of its subdomains"));
                         }
                     });
+            checkPassword(account, path, existing, violations);
+        }
+    }
+
+    private void checkPassword(
+            TestAccountInput account, String path, Existing existing, List<FieldViolation> violations) {
+        TestAccount saved = account.id() == null ? null : existing.testAccounts().get(account.id());
+        if (account.id() != null && saved == null) {
+            violations.add(new FieldViolation(path + ".id", "isn't an account on this project"));
+        } else if (saved == null && !account.hasPassword()) {
+            violations.add(new FieldViolation(path + ".password", "must not be blank"));
+        } else if (saved != null
+                && !account.hasPassword()
+                && !stagingUrls.isSameHost(saved.getLoginUrl(), account.loginUrl())) {
+            // Without this, anyone who can edit a project could point a stored password at their own site.
+            violations.add(new FieldViolation(path + ".password", "must be entered again because the login site changed"));
         }
     }
 

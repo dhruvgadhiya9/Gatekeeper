@@ -48,6 +48,12 @@ public class StagingUrlPolicy {
         return host.isPresent() && stagingHost.isPresent() && matchesDomain(host.get(), stagingHost.get());
     }
 
+    /** True if both URLs have exactly the same host. */
+    public boolean isSameHost(String first, String second) {
+        Optional<String> firstHost = parseHost(first);
+        return firstHost.isPresent() && firstHost.equals(parseHost(second));
+    }
+
     private Optional<String> checkHost(String host) {
         if (BLOCKED_HOSTS.contains(host) || host.endsWith(".localhost") || isUnsafeNumericHost(host)) {
             return Optional.of("must not point to this machine, a link-local address or a cloud metadata service");

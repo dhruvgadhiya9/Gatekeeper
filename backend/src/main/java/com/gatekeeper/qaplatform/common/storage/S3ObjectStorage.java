@@ -34,6 +34,11 @@ public class S3ObjectStorage implements ObjectStorage {
                 RequestBody.fromInputStream(content, sizeBytes));
     }
 
+    @Override
+    public void delete(String key) {
+        s3.deleteObject(request -> request.bucket(properties.bucket()).key(key));
+    }
+
     private void ensureBucket() {
         if (bucketReady) {
             return;
