@@ -4,6 +4,7 @@ import { ApiError } from "../../api/client";
 import { deleteDesignUpload, deleteProject, getProject, uploadDesigns, type ProjectDetail } from "../../api/projects";
 import { useAuth } from "../../auth/AuthContext";
 import { SecondaryButton } from "../../components/form";
+import { FigmaFrames } from "./FigmaFrames";
 import { DEPARTMENT_LABELS } from "./labels";
 
 function DeleteProject({ projectId }: { projectId: string }) {
@@ -112,6 +113,22 @@ function DesignSection({
           <Detail label="Figma file key">{design.figmaFileKey}</Detail>
           <Detail label="Access token">{design.tokenStored ? "Stored" : "Not stored"}</Detail>
         </dl>
+        {problem && <p role="alert" className="mt-3 rounded bg-red-50 p-3 text-sm text-red-800">{problem}</p>}
+        {design.uploads.length > 0 && (
+          <ul className="mt-3 flex flex-col gap-1 text-sm text-slate-800">
+            {design.uploads.map((upload) => (
+              <li key={upload.id} className="flex items-center justify-between gap-2">
+                <span className="break-all">{upload.fileName}</span>
+                {canUpload && (
+                  <SecondaryButton label={`Remove ${upload.fileName}`} onClick={() => void remove(upload.id)}>
+                    Remove
+                  </SecondaryButton>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {canUpload && <FigmaFrames projectId={project.id} onExported={onUploaded} />}
       </Section>
     );
   }
