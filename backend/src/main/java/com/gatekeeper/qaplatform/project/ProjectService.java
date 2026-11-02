@@ -185,7 +185,13 @@ public class ProjectService {
         if (sameType) {
             DesignSource source = saved.get();
             if (input.type() == DesignSource.Type.FIGMA) {
-                source.setFigmaFileKey(figmaUrls.parseFileKey(input.figmaUrl()).orElseThrow());
+                String fileKey = figmaUrls.parseFileKey(input.figmaUrl()).orElseThrow();
+                if (!fileKey.equals(source.getFigmaFileKey())) {
+                    // Frames exported from the old file no longer describe this design.
+                    storageCleanup.deleteAfterCommit(storageKeys(source));
+                    designUploads.deleteAll(designUploads.findByDesignSourceIdOrderByFileNameAsc(source.getId()));
+                }
+                source.setFigmaFileKey(fileKey);
                 if (input.token() != null && !input.token().isBlank()) {
                     source.setToken(input.token());
                 }

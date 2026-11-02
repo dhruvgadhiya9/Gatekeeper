@@ -26,7 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class DesignUploadService {
 
-    private static final int MAX_FILES_PER_PROJECT = 50;
+    public static final int MAX_FILES_PER_PROJECT = 50;
     private static final long MAX_FILE_BYTES = 10 * 1024 * 1024;
     private static final int MAX_NAME_LENGTH = 255;
 
@@ -150,7 +150,7 @@ public class DesignUploadService {
     }
 
     /** Keeps only the last path segment and removes control characters, for display only. */
-    static String cleanFileName(String original) {
+    public static String cleanFileName(String original) {
         String name = original == null ? "" : original;
         name = name.substring(Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\')) + 1);
         name = name.replaceAll("\\p{Cntrl}", "").trim();
