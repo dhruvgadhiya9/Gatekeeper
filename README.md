@@ -15,8 +15,9 @@ report is generated.
 - Architecture and rules: `CLAUDE.md`
 - Branching and commit conventions: `CONTRIBUTING.md`
 
-**Status:** Phase 2 complete (skeleton, local environment, login, roles and audit log). The
-intake wizard and the integrations come in later phases.
+**Status:** Phase 3 complete (skeleton, local environment, login, roles, audit log and project
+intake). Zoho IDs and repositories are typed in by hand until their integrations arrive in Phases
+4 and 5. Projects can't be edited or deleted yet.
 
 ## Prerequisites
 
@@ -70,6 +71,16 @@ send a verified email claim for `APP_ADMIN_EMAILS` and `APP_ALLOWED_EMAIL_DOMAIN
 Set `APP_ALLOWED_EMAIL_DOMAINS` for Google, and `COOKIE_SECURE=true` anywhere other than local HTTP.
 
 Signing out ends the Gatekeeper session only, not the session at the identity provider.
+
+## Create a project
+
+Admins and QA leads use **Projects > New project**. Viewers can read projects but not create them.
+
+Before real use, set `APP_PRODUCTION_DOMAINS` in `infra/.env` so that production can't be entered
+as a staging URL. With it empty, only local and cloud metadata addresses are refused.
+
+The wizard's Features step accepts a CSV with the columns `title` (required), `description`,
+`acceptance_criteria` and `priority`, and links to a template.
 
 ## Run the backend and frontend outside Docker
 

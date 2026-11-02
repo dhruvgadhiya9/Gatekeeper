@@ -47,7 +47,8 @@ list installations and repos, short-lived clone token for the runner, read
 CODEOWNERS, git blame for a file/line range via the API. Implement
 integration/figma: list frames of a file and export selected frames as PNG to
 storage. Wrap all calls with Resilience4j retry and circuit breaker, add
-WireMock tests. Never log tokens.
+WireMock tests. Never log tokens. Replace the free-text repositories in the
+intake wizard (Phase 3) with the GitHub App installation picker.
 ```
 
 ## Phase 5 — Zoho Projects integration
@@ -86,6 +87,9 @@ PLANNING produces a Markdown test plan; the UI shows it with edit/approve/reject
 RUNNING streams step progress to the UI via Server-Sent Events. Implement result
 ingestion: validate findings.json against the JSON schema in Part C, store
 findings and evidence keys. Add cancel run, timeouts, and failure handling.
+At run start, re-check the staging URL with StagingUrlPolicy, because the
+production deny-list may have changed since the project was created. The run-start
+endpoint must be POST /api/projects/{id}/runs, which is already rate limited.
 ```
 
 ## Phase 8 — Triage and auto-assignment in Zoho

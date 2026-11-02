@@ -78,6 +78,7 @@ com.gatekeeper.qaplatform
 - Project(id, name, zohoPortalId, zohoProjectId, stagingUrl, createdBy, ...)
 - RepoConnection(id, projectId, type[FRONTEND|BACKEND|OTHER], provider, repoFullName, defaultBranch, installationId)
 - DesignSource(id, projectId, type[FIGMA|UPLOAD], figmaFileKey, encryptedToken)
+- DesignUpload(id, designSourceId, fileName, storageKey, contentType, sizeBytes)
 - TestAccount(id, projectId, role, username, encryptedPassword, loginUrl)
 - FeatureSpec(id, projectId, title, description, acceptanceCriteria, priority)
 - TestPlan(id, runId, markdown, status[DRAFT|APPROVED|REJECTED], approvedBy)
