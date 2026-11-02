@@ -24,6 +24,7 @@
   ],
   "users": [
     {
+      "id": "00000000-0000-4000-8000-000000000001",
       "username": "admin",
       "email": "admin@gatekeeper.test",
       "firstName": "Local",
@@ -33,6 +34,7 @@
       "credentials": [{ "type": "password", "value": "${KEYCLOAK_TEST_USER_PASSWORD}", "temporary": false }]
     },
     {
+      "id": "00000000-0000-4000-8000-000000000002",
       "username": "qalead",
       "email": "qalead@gatekeeper.test",
       "firstName": "Local",
@@ -42,6 +44,7 @@
       "credentials": [{ "type": "password", "value": "${KEYCLOAK_TEST_USER_PASSWORD}", "temporary": false }]
     },
     {
+      "id": "00000000-0000-4000-8000-000000000003",
       "username": "viewer",
       "email": "viewer@gatekeeper.test",
       "firstName": "Local",
