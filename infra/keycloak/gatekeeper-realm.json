@@ -1,0 +1,54 @@
+{
+  "realm": "gatekeeper",
+  "displayName": "Gatekeeper (local development)",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "clients": [
+    {
+      "clientId": "${OIDC_CLIENT_ID}",
+      "name": "Gatekeeper backend",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "${OIDC_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["${PUBLIC_URL}/login/oauth2/code/oidc"],
+      "webOrigins": [],
+      "attributes": { "pkce.code.challenge.method": "S256" }
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@gatekeeper.test",
+      "firstName": "Local",
+      "lastName": "Admin",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "${KEYCLOAK_TEST_USER_PASSWORD}", "temporary": false }]
+    },
+    {
+      "username": "qalead",
+      "email": "qalead@gatekeeper.test",
+      "firstName": "Local",
+      "lastName": "QA Lead",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "${KEYCLOAK_TEST_USER_PASSWORD}", "temporary": false }]
+    },
+    {
+      "username": "viewer",
+      "email": "viewer@gatekeeper.test",
+      "firstName": "Local",
+      "lastName": "Viewer",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "${KEYCLOAK_TEST_USER_PASSWORD}", "temporary": false }]
+    }
+  ]
+}
