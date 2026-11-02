@@ -53,6 +53,41 @@ services:
       timeout: 5s
       retries: 20
 
+  # Development identity provider. The backend and the browser must see the same issuer URL.
+  # Browsers resolve *.localhost to this machine, and the network alias does the same for
+  # containers, so keycloak.localhost:8180 works from both.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    command: start-dev --import-realm --http-port=8180
+    environment:
+      KC_HOSTNAME: http://keycloak.localhost:8180
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:?set in infra/.env}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set in infra/.env}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?set in infra/.env}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?set in infra/.env}
+      PUBLIC_URL: ${PUBLIC_URL:?set in infra/.env}
+      KEYCLOAK_TEST_USER_PASSWORD: ${KEYCLOAK_TEST_USER_PASSWORD:?set in infra/.env}
+    ports:
+      - "127.0.0.1:8180:8180"
+    volumes:
+      - ./keycloak/gatekeeper-realm.json:/opt/keycloak/data/import/gatekeeper-realm.json:ro
+    networks:
+      default:
+        aliases:
+          - keycloak.localhost
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '200 OK' <&3
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 30
+
   backend:
     build: ../backend
     environment:
@@ -60,6 +95,14 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set in infra/.env}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?set in infra/.env}
+      APP_ADMIN_EMAILS: ${APP_ADMIN_EMAILS:-}
+      APP_ALLOWED_EMAIL_DOMAINS: ${APP_ALLOWED_EMAIL_DOMAINS:-}
+      PUBLIC_URL: ${PUBLIC_URL}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      OIDC_ISSUER_URI: ${OIDC_ISSUER_URI:?set in infra/.env}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8081}:8080"
     depends_on:
@@ -68,6 +111,8 @@ services:
       rabbitmq:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health"]

@@ -10,6 +10,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": backendUrl,
+      "/oauth2": backendUrl,
+      "/login/oauth2": backendUrl,
       "/actuator/health": backendUrl,
     },
   },
