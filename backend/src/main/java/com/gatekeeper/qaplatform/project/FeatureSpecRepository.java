@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FeatureSpecRepository extends JpaRepository<FeatureSpec, UUID> {
 
-    List<FeatureSpec> findByProjectId(UUID projectId);
+    List<FeatureSpec> findByProjectIdOrderByTitleAsc(UUID projectId);
 }

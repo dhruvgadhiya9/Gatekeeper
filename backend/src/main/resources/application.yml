@@ -64,6 +64,9 @@ app:
   encryption:
     # Base64-encoded 256-bit key. The application refuses to start without it.
     key: ${APP_ENCRYPTION_KEY}
+  staging:
+    # Comma-separated. These domains and their subdomains can never be tested.
+    production-domains: ${APP_PRODUCTION_DOMAINS:}
   rate-limit:
     login-per-minute: 30
     run-start-per-minute: 10
