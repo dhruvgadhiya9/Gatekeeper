@@ -12,14 +12,22 @@ export interface FeatureInput {
   priority: Priority;
 }
 
-export interface CreateProjectRequest {
+export interface RepositoryInput {
+  type: RepositoryType;
+  repoFullName: string;
+  defaultBranch: string;
+  installationId?: number | null;
+}
+
+/** When editing, leaving out a password or token keeps the stored one. */
+export interface ProjectRequest {
   name: string;
   zohoPortalId: string;
   zohoProjectId: string;
-  design: { type: "FIGMA"; figmaUrl: string; token: string } | { type: "UPLOAD" } | null;
-  repositories: { type: RepositoryType; repoFullName: string; defaultBranch: string }[];
+  design: { type: "FIGMA"; figmaUrl: string; token?: string } | { type: "UPLOAD" } | null;
+  repositories: RepositoryInput[];
   stagingUrl: string;
-  testAccounts: { role: string; username: string; password: string; loginUrl: string }[];
+  testAccounts: { id?: string; role: string; username: string; password?: string; loginUrl: string }[];
   features: FeatureInput[];
   departmentMappings: {
     category: DepartmentCategory;
@@ -27,6 +35,7 @@ export interface CreateProjectRequest {
     fallbackZohoUserId: string;
     securityLeadZohoUserId: string | null;
   }[];
+  version?: number;
 }
 
 export interface ProjectSummary {
@@ -45,6 +54,7 @@ export interface DesignUpload {
 }
 
 export interface ProjectDetail extends ProjectSummary {
+  version: number;
   zohoPortalId: string;
   zohoProjectId: string;
   design: {
@@ -53,7 +63,7 @@ export interface ProjectDetail extends ProjectSummary {
     tokenStored: boolean;
     uploads: DesignUpload[];
   } | null;
-  repositories: { id: string; type: RepositoryType; repoFullName: string; defaultBranch: string }[];
+  repositories: (RepositoryInput & { id: string })[];
   testAccounts: { id: string; role: string; username: string; loginUrl: string }[];
   features: (FeatureInput & { id: string })[];
   departmentMappings: {
@@ -82,8 +92,16 @@ export const listProjects = (page: number) =>
 
 export const getProject = (id: string) => api<ProjectDetail>(`/api/projects/${id}`);
 
-export const createProject = (request: CreateProjectRequest) =>
-  postJson<ProjectDetail>("/api/projects", request);
+export const createProject = (request: ProjectRequest) => postJson<ProjectDetail>("/api/projects", request);
+
+export const updateProject = (id: string, request: ProjectRequest) =>
+  api<ProjectDetail>(`/api/projects/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+
+export const deleteProject = (id: string) => api<void>(`/api/projects/${id}`, { method: "DELETE" });
 
 function postFiles<T>(path: string, field: string, files: File[]): Promise<T> {
   const body = new FormData();
@@ -93,6 +111,9 @@ function postFiles<T>(path: string, field: string, files: File[]): Promise<T> {
 
 export const uploadDesigns = (projectId: string, files: File[]) =>
   postFiles<DesignUpload[]>(`/api/projects/${projectId}/design-uploads`, "files", files);
+
+export const deleteDesignUpload = (projectId: string, uploadId: string) =>
+  api<void>(`/api/projects/${projectId}/design-uploads/${uploadId}`, { method: "DELETE" });
 
 export const parseFeatureCsv = (file: File) =>
   postFiles<FeatureCsvResult>("/api/projects/feature-csv", "file", [file]);

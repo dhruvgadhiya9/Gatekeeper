@@ -34,6 +34,7 @@ export function TestAccountsStep({ draft, update, errors }: StepProps) {
             label="Password"
             type="password"
             autoComplete="new-password"
+            hint={account.id ? "Leave empty to keep the stored password." : undefined}
             value={account.password}
             error={errors[`testAccounts[${index}].password`]}
             onChange={(password) => change(index, { password })}
