@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface TestRunRepository extends JpaRepository<TestRun, UUID> {
 
     List<TestRun> findByProjectId(UUID projectId);
+
+    boolean existsByProjectId(UUID projectId);
 }

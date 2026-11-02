@@ -1,7 +1,7 @@
 package com.gatekeeper.qaplatform.project;
 
 import com.gatekeeper.qaplatform.common.error.RequestValidationException;
-import com.gatekeeper.qaplatform.project.dto.CreateProjectRequest.FeatureInput;
+import com.gatekeeper.qaplatform.project.dto.ProjectRequest.FeatureInput;
 import jakarta.validation.Validator;
 import java.io.IOException;
 import java.io.Reader;

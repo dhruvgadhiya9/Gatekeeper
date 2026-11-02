@@ -1,6 +1,7 @@
 package com.gatekeeper.qaplatform.common.storage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.gatekeeper.qaplatform.config.StorageConfig;
 import com.gatekeeper.qaplatform.config.StorageProperties;
@@ -13,6 +14,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 @Testcontainers
 class S3ObjectStorageTest {
@@ -51,6 +53,11 @@ class S3ObjectStorageTest {
                     client.getObjectAsBytes(request -> request.bucket("test-bucket").key("a/first.png"));
             assertThat(stored.asByteArray()).isEqualTo(content);
             assertThat(stored.response().contentType()).isEqualTo("image/png");
+
+            storage.delete("a/first.png");
+            storage.delete("a/never-existed.png");
+            assertThatThrownBy(() -> client.getObjectAsBytes(request -> request.bucket("test-bucket").key("a/first.png")))
+                    .isInstanceOf(NoSuchKeyException.class);
         }
     }
 }

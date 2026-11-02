@@ -6,6 +6,7 @@ import com.gatekeeper.qaplatform.common.error.FieldViolation;
 import com.gatekeeper.qaplatform.common.error.RequestValidationException;
 import com.gatekeeper.qaplatform.common.error.ResourceNotFoundException;
 import com.gatekeeper.qaplatform.common.storage.ObjectStorage;
+import com.gatekeeper.qaplatform.common.storage.StorageCleanup;
 import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse.DesignUploadResponse;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -52,16 +54,19 @@ public class DesignUploadService {
     private final DesignSourceRepository designSources;
     private final DesignUploadRepository uploads;
     private final ObjectStorage storage;
+    private final StorageCleanup storageCleanup;
 
     public DesignUploadService(
             ProjectRepository projects,
             DesignSourceRepository designSources,
             DesignUploadRepository uploads,
-            ObjectStorage storage) {
+            ObjectStorage storage,
+            StorageCleanup storageCleanup) {
         this.projects = projects;
         this.designSources = designSources;
         this.uploads = uploads;
         this.storage = storage;
+        this.storageCleanup = storageCleanup;
     }
 
     /** Checks every file first, so one bad file means none are stored. */
@@ -85,6 +90,17 @@ public class DesignUploadService {
             stored.add(store(projectId, source.getId(), files.get(i), types.get(i)));
         }
         return stored;
+    }
+
+    @Audited(action = "DESIGN_UPLOAD_DELETE", target = "#projectId", details = "{uploadId: #uploadId}")
+    @Transactional
+    public void delete(UUID projectId, UUID uploadId) {
+        DesignUpload upload = uploads.findById(uploadId)
+                .filter(item -> designSources.findByProjectId(projectId).stream()
+                        .anyMatch(source -> source.getId().equals(item.getDesignSourceId())))
+                .orElseThrow(() -> new ResourceNotFoundException("Design image not found"));
+        uploads.delete(upload);
+        storageCleanup.deleteAfterCommit(List.of(upload.getStorageKey()));
     }
 
     private static List<ImageType> checkFiles(List<MultipartFile> files) {

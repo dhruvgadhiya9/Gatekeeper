@@ -6,4 +6,7 @@ import java.io.InputStream;
 public interface ObjectStorage {
 
     void put(String key, InputStream content, long sizeBytes, String contentType);
+
+    /** Does nothing if the object doesn't exist. */
+    void delete(String key);
 }

@@ -3,9 +3,9 @@ package com.gatekeeper.qaplatform.project;
 import com.gatekeeper.qaplatform.auth.AuthenticatedUser;
 import com.gatekeeper.qaplatform.common.error.RequestValidationException;
 import com.gatekeeper.qaplatform.common.web.PageResponse;
-import com.gatekeeper.qaplatform.project.dto.CreateProjectRequest;
 import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse;
 import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse.DesignUploadResponse;
+import com.gatekeeper.qaplatform.project.dto.ProjectRequest;
 import com.gatekeeper.qaplatform.project.dto.ProjectSummaryResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -17,9 +17,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,7 +49,7 @@ public class ProjectController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'QA_LEAD')")
     public ProjectDetailResponse create(
-            @Valid @RequestBody CreateProjectRequest request, @AuthenticationPrincipal AuthenticatedUser actor) {
+            @Valid @RequestBody ProjectRequest request, @AuthenticationPrincipal AuthenticatedUser actor) {
         return projectService.create(request, actor);
     }
 
@@ -63,12 +65,32 @@ public class ProjectController {
         return projectService.get(id);
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'QA_LEAD')")
+    public ProjectDetailResponse update(@PathVariable UUID id, @Valid @RequestBody ProjectRequest request) {
+        return projectService.update(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    public void delete(@PathVariable UUID id) {
+        projectService.delete(id);
+    }
+
     @PostMapping(path = "/{id}/design-uploads", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'QA_LEAD')")
     public List<DesignUploadResponse> uploadDesigns(
             @PathVariable UUID id, @RequestPart("files") List<MultipartFile> files) {
         return designUploadService.upload(id, files);
+    }
+
+    @DeleteMapping("/{id}/design-uploads/{uploadId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN', 'QA_LEAD')")
+    public void deleteDesign(@PathVariable UUID id, @PathVariable UUID uploadId) {
+        designUploadService.delete(id, uploadId);
     }
 
     /** Checks a CSV and returns its features for the wizard. Nothing is saved. */
