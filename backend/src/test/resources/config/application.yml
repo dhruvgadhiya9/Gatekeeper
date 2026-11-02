@@ -6,6 +6,8 @@ APP_JWT_SECRET: HyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4=
 OIDC_ISSUER_URI: https://idp.example.test
 OIDC_CLIENT_ID: test-client
 OIDC_CLIENT_SECRET: test-secret
+STORAGE_ACCESS_KEY: test-access-key
+STORAGE_SECRET_KEY: test-secret-key
 
 app:
   auth:

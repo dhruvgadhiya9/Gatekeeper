@@ -23,7 +23,10 @@ public record ProjectDetailResponse(
         List<FeatureResponse> features,
         List<DepartmentMappingResponse> departmentMappings) {
 
-    public record DesignResponse(DesignSource.Type type, String figmaFileKey, boolean tokenStored) {}
+    public record DesignResponse(
+            DesignSource.Type type, String figmaFileKey, boolean tokenStored, List<DesignUploadResponse> uploads) {}
+
+    public record DesignUploadResponse(UUID id, String fileName, String contentType, long sizeBytes) {}
 
     public record RepositoryResponse(
             UUID id, RepoConnection.Type type, String repoFullName, String defaultBranch, Long installationId) {}

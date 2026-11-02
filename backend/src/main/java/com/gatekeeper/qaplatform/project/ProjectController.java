@@ -5,11 +5,13 @@ import com.gatekeeper.qaplatform.common.error.RequestValidationException;
 import com.gatekeeper.qaplatform.common.web.PageResponse;
 import com.gatekeeper.qaplatform.project.dto.CreateProjectRequest;
 import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse;
+import com.gatekeeper.qaplatform.project.dto.ProjectDetailResponse.DesignUploadResponse;
 import com.gatekeeper.qaplatform.project.dto.ProjectSummaryResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -32,10 +34,13 @@ public class ProjectController {
 
     private final ProjectService projectService;
     private final FeatureCsvParser featureCsvParser;
+    private final DesignUploadService designUploadService;
 
-    public ProjectController(ProjectService projectService, FeatureCsvParser featureCsvParser) {
+    public ProjectController(
+            ProjectService projectService, FeatureCsvParser featureCsvParser, DesignUploadService designUploadService) {
         this.projectService = projectService;
         this.featureCsvParser = featureCsvParser;
+        this.designUploadService = designUploadService;
     }
 
     @PostMapping
@@ -56,6 +61,14 @@ public class ProjectController {
     @GetMapping("/{id}")
     public ProjectDetailResponse get(@PathVariable UUID id) {
         return projectService.get(id);
+    }
+
+    @PostMapping(path = "/{id}/design-uploads", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN', 'QA_LEAD')")
+    public List<DesignUploadResponse> uploadDesigns(
+            @PathVariable UUID id, @RequestPart("files") List<MultipartFile> files) {
+        return designUploadService.upload(id, files);
     }
 
     /** Checks a CSV and returns its features for the wizard. Nothing is saved. */
