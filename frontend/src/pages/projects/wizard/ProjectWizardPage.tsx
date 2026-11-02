@@ -1,12 +1,13 @@
-import { useRef, useState, type ComponentType } from "react";
-import { Link, useNavigate } from "react-router";
+import { useEffect, useRef, useState, type ComponentType } from "react";
+import { Link, useNavigate, useParams } from "react-router";
 import { ApiError } from "../../../api/client";
-import { createProject, uploadDesigns } from "../../../api/projects";
+import { createProject, getProject, updateProject, uploadDesigns, type ProjectDetail } from "../../../api/projects";
 import { SecondaryButton } from "../../../components/form";
 import { BasicsStep } from "./BasicsStep";
 import { DepartmentsStep } from "./DepartmentsStep";
 import { DesignStep } from "./DesignStep";
 import {
+  draftFromProject,
   firstStepWithError,
   initialDraft,
   toRequest,
@@ -31,9 +32,10 @@ const STEPS: { title: string; component: ComponentType<StepProps> }[] = [
   { title: "Departments", component: DepartmentsStep },
 ];
 
-export function ProjectWizardPage() {
+/** @param existing the project being edited; without it, the wizard creates a new one */
+function ProjectWizard({ existing }: { existing?: ProjectDetail }) {
   const navigate = useNavigate();
-  const [draft, setDraft] = useState(initialDraft);
+  const [draft, setDraft] = useState<Draft>(() => (existing ? draftFromProject(existing) : initialDraft()));
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Errors>({});
   const [problem, setProblem] = useState<string | null>(null);
@@ -43,6 +45,7 @@ export function ProjectWizardPage() {
   const current = STEPS[step] ?? STEPS[0]!;
   const CurrentStep = current.component;
   const isLastStep = step === STEPS.length - 1;
+  const submitLabel = existing ? "Save changes" : "Create project";
 
   function goTo(next: number) {
     setStep(next);
@@ -74,9 +77,11 @@ export function ProjectWizardPage() {
     setSubmitting(true);
     setProblem(null);
     try {
-      const project = await createProject(toRequest(draft));
+      const project = existing
+        ? await updateProject(existing.id, toRequest(draft, existing.version))
+        : await createProject(toRequest(draft));
       let uploadFailed = false;
-      if (draft.designType === "UPLOAD") {
+      if (draft.designType === "UPLOAD" && draft.designFiles.length > 0) {
         uploadFailed = await uploadDesigns(project.id, draft.designFiles).then(
           () => false,
           () => true,
@@ -100,14 +105,14 @@ export function ProjectWizardPage() {
       }
       return;
     }
-    setProblem(error instanceof ApiError ? error.message : "Could not create the project. Check your connection and try again.");
+    setProblem(error instanceof ApiError ? error.message : "Could not save the project. Check your connection and try again.");
   }
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-5">
       <div className="flex flex-col gap-1">
         <p className="text-sm text-slate-600">
-          Step {step + 1} of {STEPS.length}
+          {existing ? `Editing ${existing.name} · ` : ""}Step {step + 1} of {STEPS.length}
         </p>
         <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold text-slate-900 outline-none">
           {current.title}
@@ -146,7 +151,7 @@ export function ProjectWizardPage() {
               Back
             </SecondaryButton>
           )}
-          <Link to="/projects" className="text-sm text-slate-600 underline">
+          <Link to={existing ? `/projects/${existing.id}` : "/projects"} className="text-sm text-slate-600 underline">
             Cancel
           </Link>
           <button
@@ -154,10 +159,43 @@ export function ProjectWizardPage() {
             disabled={submitting}
             className="ml-auto rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
           >
-            {isLastStep ? (submitting ? "Creating…" : "Create project") : "Next"}
+            {isLastStep ? (submitting ? "Saving…" : submitLabel) : "Next"}
           </button>
         </div>
       </form>
     </div>
   );
+}
+
+export function ProjectWizardPage() {
+  return <ProjectWizard />;
+}
+
+export function ProjectEditPage() {
+  const { id = "" } = useParams();
+  const [project, setProject] = useState<ProjectDetail | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+    getProject(id)
+      .then((loaded) => {
+        if (!ignore) {
+          setProject(loaded);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setFailed(true);
+        }
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [id]);
+
+  if (failed) {
+    return <p role="alert" className="text-slate-700">Could not load this project.</p>;
+  }
+  return project ? <ProjectWizard existing={project} /> : <p role="status" className="text-slate-600">Loading…</p>;
 }

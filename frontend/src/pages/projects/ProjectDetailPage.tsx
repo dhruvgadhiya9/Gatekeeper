@@ -1,9 +1,48 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { Link, useLocation, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { ApiError } from "../../api/client";
-import { getProject, uploadDesigns, type ProjectDetail } from "../../api/projects";
+import { deleteDesignUpload, deleteProject, getProject, uploadDesigns, type ProjectDetail } from "../../api/projects";
 import { useAuth } from "../../auth/AuthContext";
+import { SecondaryButton } from "../../components/form";
 import { DEPARTMENT_LABELS } from "./labels";
+
+function DeleteProject({ projectId }: { projectId: string }) {
+  const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  async function confirm() {
+    setProblem(null);
+    try {
+      await deleteProject(projectId);
+      navigate("/projects");
+    } catch (error) {
+      setProblem(error instanceof ApiError ? error.message : "Could not delete the project.");
+      setConfirming(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {problem && <p role="alert" className="text-sm text-red-700">{problem}</p>}
+      {confirming ? (
+        <>
+          <span className="text-sm text-slate-700">Permanently delete this project?</span>
+          <button
+            type="button"
+            onClick={() => void confirm()}
+            className="rounded bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800"
+          >
+            Yes, delete
+          </button>
+          <SecondaryButton onClick={() => setConfirming(false)}>Keep project</SecondaryButton>
+        </>
+      ) : (
+        <SecondaryButton onClick={() => setConfirming(true)}>Delete</SecondaryButton>
+      )}
+    </div>
+  );
+}
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -53,6 +92,16 @@ function DesignSection({
     }
   }
 
+  async function remove(uploadId: string) {
+    setProblem(null);
+    try {
+      await deleteDesignUpload(project.id, uploadId);
+      await onUploaded();
+    } catch {
+      setProblem("Could not remove the image. Try again.");
+    }
+  }
+
   if (!design) {
     return <Section title="Design"><p className="text-sm text-slate-600">No design to compare.</p></Section>;
   }
@@ -72,9 +121,16 @@ function DesignSection({
       {design.uploads.length === 0 ? (
         <p className="text-sm text-slate-600">No images uploaded yet.</p>
       ) : (
-        <ul className="list-inside list-disc text-sm text-slate-800">
+        <ul className="flex flex-col gap-1 text-sm text-slate-800">
           {design.uploads.map((upload) => (
-            <li key={upload.id} className="break-all">{upload.fileName}</li>
+            <li key={upload.id} className="flex items-center justify-between gap-2">
+              <span className="break-all">{upload.fileName}</span>
+              {canUpload && (
+                <SecondaryButton label={`Remove ${upload.fileName}`} onClick={() => void remove(upload.id)}>
+                  Remove
+                </SecondaryButton>
+              )}
+            </li>
           ))}
         </ul>
       )}
@@ -109,6 +165,7 @@ export function ProjectDetailPage() {
   const location = useLocation();
   const { state } = useAuth();
   const canEdit = state.status === "authenticated" && state.user.role !== "VIEWER";
+  const isAdmin = state.status === "authenticated" && state.user.role === "ADMIN";
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const uploadFailed = (location.state as { uploadFailed?: boolean } | null)?.uploadFailed === true;
@@ -151,6 +208,17 @@ export function ProjectDetailPage() {
         <p className="text-sm text-slate-600">
           Created by {project.createdBy} on {new Date(project.createdAt).toLocaleDateString()}
         </p>
+        {canEdit && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Link
+              to={`/projects/${project.id}/edit`}
+              className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+            >
+              Edit
+            </Link>
+            {isAdmin && <DeleteProject projectId={project.id} />}
+          </div>
+        )}
       </div>
 
       <Section title="Overview">

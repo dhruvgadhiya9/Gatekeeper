@@ -6,7 +6,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProjectDetailPage } from "./pages/projects/ProjectDetailPage";
 import { ProjectListPage } from "./pages/projects/ProjectListPage";
-import { ProjectWizardPage } from "./pages/projects/wizard/ProjectWizardPage";
+import { ProjectEditPage, ProjectWizardPage } from "./pages/projects/wizard/ProjectWizardPage";
 import { UsersPage } from "./pages/UsersPage";
 
 export default function App() {
@@ -18,6 +18,7 @@ export default function App() {
         <Route path="/projects" element={<ProjectListPage />} />
         <Route element={<RequireRole roles={["ADMIN", "QA_LEAD"]} />}>
           <Route path="/projects/new" element={<ProjectWizardPage />} />
+          <Route path="/projects/:id/edit" element={<ProjectEditPage />} />
         </Route>
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
         <Route element={<RequireRole roles={["ADMIN"]} />}>

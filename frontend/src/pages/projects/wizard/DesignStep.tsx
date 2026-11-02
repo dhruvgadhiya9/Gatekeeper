@@ -36,6 +36,11 @@ export function DesignStep({ draft, update, errors }: StepProps) {
         error={errors["design.type"]}
         onChange={(designType) => update({ designType })}
       />
+      {draft.saved.designType !== "NONE" && draft.designType !== draft.saved.designType && (
+        <p role="status" className="rounded bg-amber-50 p-3 text-sm text-amber-900">
+          Saving this change removes the project's current design data.
+        </p>
+      )}
       {draft.designType === "FIGMA" && (
         <>
           <TextField
@@ -50,7 +55,11 @@ export function DesignStep({ draft, update, errors }: StepProps) {
             label="Figma access token"
             type="password"
             autoComplete="new-password"
-            hint="Stored encrypted and never shown again."
+            hint={
+              draft.saved.designType === "FIGMA" && draft.saved.figmaTokenStored
+                ? "Leave empty to keep the stored token."
+                : "Stored encrypted and never shown again."
+            }
             value={draft.figmaToken}
             error={errors["design.token"]}
             onChange={(figmaToken) => update({ figmaToken })}
@@ -73,7 +82,12 @@ export function DesignStep({ draft, update, errors }: StepProps) {
               event.target.value = "";
             }}
           />
-          <p className="text-xs text-slate-500">PNG or JPEG, up to 10 MB each. They upload when you create the project.</p>
+          <p className="text-xs text-slate-500">
+            PNG or JPEG, up to 10 MB each. They upload when you save the project.
+            {draft.saved.designType === "UPLOAD" && draft.saved.uploadCount > 0
+              ? ` This project already has ${draft.saved.uploadCount}; new ones are added to them.`
+              : ""}
+          </p>
           {(fileProblem ?? errors["design.files"]) && (
             <p className="text-sm text-red-700">{fileProblem ?? errors["design.files"]}</p>
           )}

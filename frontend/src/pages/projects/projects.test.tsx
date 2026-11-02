@@ -10,6 +10,7 @@ const SECRET = "typed-secret-value";
 
 const project: ProjectDetail = {
   id: "p1",
+  version: 7,
   name: "Shop",
   stagingUrl: "https://staging.shop.test",
   createdBy: "admin@corp.test",

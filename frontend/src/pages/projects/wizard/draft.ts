@@ -1,4 +1,10 @@
-import type { CreateProjectRequest, DepartmentCategory, FeatureInput, RepositoryType } from "../../../api/projects";
+import type {
+  DepartmentCategory,
+  FeatureInput,
+  ProjectDetail,
+  ProjectRequest,
+  RepositoryInput,
+} from "../../../api/projects";
 
 /**
  * What the wizard has collected so far. It stays in memory only: it holds passwords and tokens, so
@@ -12,9 +18,10 @@ export interface Draft {
   figmaUrl: string;
   figmaToken: string;
   designFiles: File[];
-  repositories: { type: RepositoryType; repoFullName: string; defaultBranch: string }[];
+  repositories: RepositoryInput[];
   stagingUrl: string;
-  testAccounts: { role: string; username: string; password: string; loginUrl: string }[];
+  /** An account with an id already has a stored password, which stays if this one is left empty. */
+  testAccounts: { id?: string; role: string; username: string; password: string; loginUrl: string }[];
   features: FeatureInput[];
   departmentMappings: {
     category: DepartmentCategory;
@@ -22,6 +29,8 @@ export interface Draft {
     fallbackZohoUserId: string;
     securityLeadZohoUserId: string;
   }[];
+  /** What's already stored when editing. Credentials themselves never reach the browser. */
+  saved: { designType: Draft["designType"]; figmaTokenStored: boolean; uploadCount: number };
 }
 
 /** Field errors keyed by the same paths the server uses, such as features[2].title. */
@@ -35,6 +44,8 @@ export interface StepProps {
 
 export const MAX_DESIGN_FILES = 50;
 export const MAX_DESIGN_FILE_BYTES = 10 * 1024 * 1024;
+
+const DEPARTMENTS = ["DESIGN", "FRONTEND", "BACKEND", "SECURITY"] as const;
 
 export const emptyFeature = (): FeatureInput => ({
   title: "",
@@ -65,32 +76,75 @@ export const initialDraft = (): Draft => ({
   stagingUrl: "",
   testAccounts: [],
   features: [emptyFeature()],
-  departmentMappings: (["DESIGN", "FRONTEND", "BACKEND", "SECURITY"] as const).map(emptyMapping),
+  departmentMappings: DEPARTMENTS.map(emptyMapping),
+  saved: { designType: "NONE", figmaTokenStored: false, uploadCount: 0 },
 });
 
-export function toRequest(draft: Draft): CreateProjectRequest {
-  const design =
-    draft.designType === "FIGMA"
-      ? { type: "FIGMA" as const, figmaUrl: draft.figmaUrl.trim(), token: draft.figmaToken }
-      : draft.designType === "UPLOAD"
-        ? { type: "UPLOAD" as const }
-        : null;
+/** Prepares a saved project for editing. Password and token fields start empty, which keeps them. */
+export function draftFromProject(project: ProjectDetail): Draft {
+  const designType = project.design?.type ?? "NONE";
+  return {
+    name: project.name,
+    zohoPortalId: project.zohoPortalId,
+    zohoProjectId: project.zohoProjectId,
+    designType,
+    figmaUrl: project.design?.figmaFileKey ? `https://www.figma.com/design/${project.design.figmaFileKey}` : "",
+    figmaToken: "",
+    designFiles: [],
+    repositories: project.repositories.map(({ type, repoFullName, defaultBranch, installationId }) => ({
+      type,
+      repoFullName,
+      defaultBranch,
+      installationId,
+    })),
+    stagingUrl: project.stagingUrl,
+    testAccounts: project.testAccounts.map((account) => ({ ...account, password: "" })),
+    features: project.features.map(({ title, description, acceptanceCriteria, priority }) => ({
+      title,
+      description: description ?? "",
+      acceptanceCriteria: acceptanceCriteria ?? "",
+      priority,
+    })),
+    departmentMappings: DEPARTMENTS.map((category) => {
+      const mapping = project.departmentMappings.find((item) => item.category === category);
+      return mapping
+        ? { ...mapping, securityLeadZohoUserId: mapping.securityLeadZohoUserId ?? "" }
+        : emptyMapping(category);
+    }),
+    saved: {
+      designType,
+      figmaTokenStored: project.design?.tokenStored ?? false,
+      uploadCount: project.design?.uploads.length ?? 0,
+    },
+  };
+}
+
+function toDesign(draft: Draft): ProjectRequest["design"] {
+  if (draft.designType === "FIGMA") {
+    const token = draft.figmaToken.trim() ? draft.figmaToken : undefined;
+    return { type: "FIGMA", figmaUrl: draft.figmaUrl.trim(), ...(token ? { token } : {}) };
+  }
+  return draft.designType === "UPLOAD" ? { type: "UPLOAD" } : null;
+}
+
+export function toRequest(draft: Draft, version?: number): ProjectRequest {
   return {
     name: draft.name.trim(),
     zohoPortalId: draft.zohoPortalId.trim(),
     zohoProjectId: draft.zohoProjectId.trim(),
-    design,
+    design: toDesign(draft),
     repositories: draft.repositories.map((repository) => ({
       ...repository,
       repoFullName: repository.repoFullName.trim(),
       defaultBranch: repository.defaultBranch.trim(),
     })),
     stagingUrl: draft.stagingUrl.trim(),
-    testAccounts: draft.testAccounts.map((account) => ({
+    testAccounts: draft.testAccounts.map(({ password, ...account }) => ({
       ...account,
       role: account.role.trim(),
       username: account.username.trim(),
       loginUrl: account.loginUrl.trim(),
+      ...(password ? { password } : {}),
     })),
     features: draft.features,
     departmentMappings: draft.departmentMappings.map((mapping) => ({
@@ -99,6 +153,7 @@ export function toRequest(draft: Draft): CreateProjectRequest {
       fallbackZohoUserId: mapping.fallbackZohoUserId.trim(),
       securityLeadZohoUserId: mapping.category === "SECURITY" ? mapping.securityLeadZohoUserId.trim() : null,
     })),
+    ...(version === undefined ? {} : { version }),
   };
 }
 
@@ -124,10 +179,16 @@ const STEP_CHECKS: ((draft: Draft, errors: Errors) => void)[] = [
   (draft, errors) => {
     if (draft.designType === "FIGMA") {
       required(errors, "design.figmaUrl", draft.figmaUrl);
-      required(errors, "design.token", draft.figmaToken);
+      const keepsToken = draft.saved.designType === "FIGMA" && draft.saved.figmaTokenStored;
+      if (!keepsToken) {
+        required(errors, "design.token", draft.figmaToken);
+      }
     }
     if (draft.designType === "UPLOAD" && draft.designFiles.length === 0) {
-      errors["design.files"] = NEEDS_IMAGE;
+      const hasSavedImages = draft.saved.designType === "UPLOAD" && draft.saved.uploadCount > 0;
+      if (!hasSavedImages) {
+        errors["design.files"] = NEEDS_IMAGE;
+      }
     }
   },
   (draft, errors) => {
@@ -144,7 +205,9 @@ const STEP_CHECKS: ((draft: Draft, errors: Errors) => void)[] = [
     draft.testAccounts.forEach((account, index) => {
       required(errors, `testAccounts[${index}].role`, account.role);
       required(errors, `testAccounts[${index}].username`, account.username);
-      required(errors, `testAccounts[${index}].password`, account.password);
+      if (!account.id) {
+        required(errors, `testAccounts[${index}].password`, account.password);
+      }
       required(errors, `testAccounts[${index}].loginUrl`, account.loginUrl);
     });
   },
