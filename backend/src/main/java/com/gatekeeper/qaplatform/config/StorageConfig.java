@@ -12,6 +12,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 @Configuration
 public class StorageConfig {
@@ -28,6 +29,21 @@ public class StorageConfig {
                 .responseChecksumValidation(ResponseChecksumValidation.WHEN_REQUIRED);
         if (properties.endpoint() != null && !properties.endpoint().isBlank()) {
             builder.endpointOverride(URI.create(properties.endpoint()))
+                    .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build());
+        }
+        return builder.build();
+    }
+
+    /** Signs for the address sandboxes use, because the host name is part of the signature. */
+    @Bean(destroyMethod = "close")
+    public S3Presigner s3Presigner(StorageProperties properties) {
+        S3Presigner.Builder builder = S3Presigner.builder()
+                .region(Region.of(properties.region()))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(properties.accessKey(), properties.secretKey())));
+        String endpoint = properties.effectiveSandboxEndpoint();
+        if (endpoint != null && !endpoint.isBlank()) {
+            builder.endpointOverride(URI.create(endpoint))
                     .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build());
         }
         return builder.build();

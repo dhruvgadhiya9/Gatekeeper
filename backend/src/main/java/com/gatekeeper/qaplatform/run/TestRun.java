@@ -8,6 +8,8 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "test_run")
@@ -34,6 +36,13 @@ public class TestRun extends BaseEntity {
     private Instant finishedAt;
     private long tokenUsage;
     private BigDecimal costUsd = BigDecimal.ZERO;
+    private long tokenBudget;
+    private Instant deadlineAt;
+    private Instant sandboxFinishedAt;
+    private Integer agentExitCode;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String resultsManifest;
 
     protected TestRun() {}
 
@@ -79,6 +88,47 @@ public class TestRun extends BaseEntity {
 
     public BigDecimal getCostUsd() {
         return costUsd;
+    }
+
+    public long getTokenBudget() {
+        return tokenBudget;
+    }
+
+    public void setTokenBudget(long tokenBudget) {
+        this.tokenBudget = tokenBudget;
+    }
+
+    public Instant getDeadlineAt() {
+        return deadlineAt;
+    }
+
+    public void setDeadlineAt(Instant deadlineAt) {
+        this.deadlineAt = deadlineAt;
+    }
+
+    public Instant getSandboxFinishedAt() {
+        return sandboxFinishedAt;
+    }
+
+    public Integer getAgentExitCode() {
+        return agentExitCode;
+    }
+
+    public String getResultsManifest() {
+        return resultsManifest;
+    }
+
+    /** Ends the sandbox's access: its job token stops working from here on. */
+    public void finishSandbox(Instant at, Integer exitCode, String manifestJson) {
+        this.sandboxFinishedAt = at;
+        this.agentExitCode = exitCode;
+        this.resultsManifest = manifestJson;
+    }
+
+    public boolean acceptsRunner(Instant now) {
+        boolean ended = status == Status.DONE || status == Status.FAILED || status == Status.CANCELLED;
+        boolean expired = deadlineAt != null && now.isAfter(deadlineAt);
+        return !ended && !expired && sandboxFinishedAt == null;
     }
 
     public void setCostUsd(BigDecimal costUsd) {

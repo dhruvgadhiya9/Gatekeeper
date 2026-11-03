@@ -8,6 +8,7 @@ OIDC_CLIENT_ID: test-client
 OIDC_CLIENT_SECRET: test-secret
 STORAGE_ACCESS_KEY: test-access-key
 STORAGE_SECRET_KEY: test-secret-key
+APP_JOB_TOKEN_SECRET: cHFyc3R1dnd4eXp7fH1+f4CBgoOEhYaHiImKi4yNjo8=
 
 app:
   auth:
