@@ -15,8 +15,8 @@ report is generated.
 - Architecture and rules: `CLAUDE.md`
 - Branching and commit conventions: `CONTRIBUTING.md`
 
-**Status:** Phase 4 complete (skeleton, local environment, login, roles, audit log, project intake
-and editing, GitHub App and Figma integrations). Zoho IDs are typed in by hand until Phase 5.
+**Status:** Phase 5 complete (skeleton, local environment, login, roles, audit log, project intake
+and editing, GitHub App, Figma and Zoho Projects integrations). Test runs start in Phase 6.
 
 ## Prerequisites
 
@@ -97,6 +97,26 @@ Until this is done, the wizard takes repositories typed as `owner/repository`.
 
 The wizard then offers accounts and repositories to choose from. Existing projects must choose
 theirs the next time they're edited.
+
+## Connect Zoho Projects
+
+Until this is done, the wizard takes typed Zoho IDs.
+
+1. In the [Zoho API console](https://api-console.zoho.com/), create a **Server-based Application**.
+   Its redirect URI is `<PUBLIC_URL>/api/integrations/zoho/callback`.
+2. Set `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET` and `ZOHO_DATA_CENTER` in `infra/.env`, then restart
+   the backend.
+3. As an admin, open **Settings** and choose **Connect Zoho**. The wizard then offers portals,
+   projects and people. Existing projects are checked against Zoho the next time they're edited.
+4. In **Settings**, enter the severity and classification IDs for each portal, and map GitHub
+   usernames to Zoho users. Zoho has no documented way to list those IDs. A blank one leaves that
+   field unset on the bug, and its value is written in the description.
+
+Attaching screenshots and reports requires WorkDrive access (`WorkDrive.files.ALL` and
+`WorkDrive.workspace.ALL`), because that's how Zoho stores files. To avoid granting it, set
+`ZOHO_ATTACHMENTS_ENABLED=false` before connecting.
+
+Disconnecting in **Settings** revokes Gatekeeper's access at Zoho.
 
 ## Use Figma designs
 

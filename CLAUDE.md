@@ -88,6 +88,9 @@ com.gatekeeper.qaplatform
 - DepartmentMapping(id, projectId, category, defaultZohoUserId, fallbackZohoUserId, securityLeadZohoUserId)
 - CodeOwnerOverride(id, projectId, pathPattern, zohoUserId)
 - UserMapping(id, githubUsername, zohoUserId)
+- ZohoConnection(id, encryptedRefreshToken, connectedBy)
+- ZohoFieldMapping(id, portalId, kind[SEVERITY|CLASSIFICATION], gatekeeperKey, zohoOptionId)
+- ZohoIssueLink(id, projectId, fingerprint, status[PENDING|UNCERTAIN|CREATED], zohoIssueId)
 - Report(id, runId, htmlKey, pdfKey, summaryJson)
 - AuditEvent(id, actor, action, target, detailsJson, at)
 
@@ -126,6 +129,13 @@ lead as follower, and (setting) require QA_LEAD approval before creating in Zoho
   attachments create.
 - Every Zoho write goes through ZohoAssignmentService, is idempotent (fingerprint
   stored in our DB before the call), retried with backoff, and audited.
+- Zoho has two user IDs. Assignees take `zpuid`; followers take `id`. Every stored Zoho user ID in
+  Gatekeeper is a `zpuid`, and ZohoAssignmentService translates for followers.
+- Never repeat a create blindly: after an unclear failure, search for the fingerprint marker first.
+- Never take an address from a Zoho redirect, because the client secret is sent to it. Addresses
+  come from `ZohoDataCenter`.
+- Unconfirmed against a real account: the `filter` on project issues (with a fallback), and the
+  project users endpoint, which is documented as deprecated.
 
 ## Authentication
 - The backend is the OIDC client, with a configurable issuer. After login it issues its own JWT

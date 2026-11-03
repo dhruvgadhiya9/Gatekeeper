@@ -94,7 +94,8 @@ endpoint must be POST /api/projects/{id}/runs, which is already rate limited.
 
 ## Phase 8 — Triage and auto-assignment in Zoho
 ```
-Implement finding/ and routing/: confirm failures by re-running the specific
+Use ZohoAssignmentService.fileIssue for every issue; it already handles idempotency,
+field IDs and auditing. Implement finding/ and routing/: confirm failures by re-running the specific
 test once in the sandbox; compute fingerprint (category + normalized title +
 file path + route); dedupe against our DB and open Zoho issues; use the
 Anthropic Java SDK to classify category/severity only when the runner left it
