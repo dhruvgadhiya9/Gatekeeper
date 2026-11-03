@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Usage: zap-baseline <url> <report-file.json>
+# A ZAP baseline: spiders the site and reports what passive scanning finds. It sends no attacks.
+set -euo pipefail
+
+TARGET="${1:?Usage: zap-baseline <url> <report-file.json>}"
+REPORT="$(realpath -m "${2:?Usage: zap-baseline <url> <report-file.json>}")"
+WORK="$(mktemp -d)"
+PROXY_HOST="$(echo "${HTTPS_PROXY:-}" | sed -E 's#^https?://([^:/]+).*#\1#')"
+PROXY_PORT="$(echo "${HTTPS_PROXY:-}" | sed -E 's#^https?://[^:/]+:([0-9]+).*#\1#')"
+
+cat > "$WORK/plan.yaml" <<YAML
+env:
+  contexts:
+    - name: target
+      urls: ["$TARGET"]
+  parameters:
+    failOnError: false
+    progressToStdout: false
+jobs:
+  - type: spider
+    parameters: { maxDuration: 5 }
+  - type: passiveScan-wait
+    parameters: { maxDuration: 10 }
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: "$(dirname "$REPORT")"
+      reportFile: "$(basename "$REPORT" .json)"
+YAML
+
+mkdir -p "$(dirname "$REPORT")"
+ARGS=(-cmd -silent -dir "$WORK/home" -autorun "$WORK/plan.yaml")
+if [ -n "$PROXY_HOST" ]; then
+    ARGS+=(-config network.connection.httpProxy.enabled=true
+           -config "network.connection.httpProxy.host=$PROXY_HOST"
+           -config "network.connection.httpProxy.port=$PROXY_PORT")
+fi
+exec zap.sh "${ARGS[@]}"
