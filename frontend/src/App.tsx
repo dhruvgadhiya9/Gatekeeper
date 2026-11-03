@@ -7,6 +7,7 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProjectDetailPage } from "./pages/projects/ProjectDetailPage";
 import { ProjectListPage } from "./pages/projects/ProjectListPage";
 import { ProjectEditPage, ProjectWizardPage } from "./pages/projects/wizard/ProjectWizardPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { UsersPage } from "./pages/UsersPage";
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
         <Route element={<RequireRole roles={["ADMIN"]} />}>
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>

@@ -38,9 +38,14 @@ function Header({ user }: { user: User }) {
             Projects
           </NavLink>
           {user.role === "ADMIN" && (
-            <NavLink to="/users" className={navLinkClass}>
-              Users
-            </NavLink>
+            <>
+              <NavLink to="/users" className={navLinkClass}>
+                Users
+              </NavLink>
+              <NavLink to="/settings" className={navLinkClass}>
+                Settings
+              </NavLink>
+            </>
           )}
         </nav>
         <div className="ml-auto flex flex-wrap items-center gap-3 text-sm text-slate-600">
