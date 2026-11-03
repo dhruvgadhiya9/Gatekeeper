@@ -97,6 +97,14 @@ resilience4j:
         base-config: external
       zoho:
         base-config: external
+      # No retry for this one: Claude Code does its own, and streaming requests can't be replayed here.
+      anthropic:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        record-exceptions:
+          - java.io.IOException
 
 management:
   endpoints:
@@ -147,6 +155,18 @@ app:
     data-center: ${ZOHO_DATA_CENTER:in}
     # Attaching files needs broad WorkDrive scopes. When false, bugs link to evidence instead.
     attachments-enabled: ${ZOHO_ATTACHMENTS_ENABLED:true}
+  llm:
+    # Only the backend holds this. Sandboxes reach the API through the proxy with a job token.
+    api-key: ${ANTHROPIC_API_KEY:}
+    base-url: ${ANTHROPIC_UPSTREAM_URL:https://api.anthropic.com}
+    # The models a run may use. The first is what agents run on, the second their background helper.
+    model: ${LLM_MODEL:claude-opus-5-5}
+    small-model: ${LLM_SMALL_MODEL:claude-haiku-5-5}
+    # US dollars per million tokens, for cost estimates. Check these against Anthropic's pricing page.
+    pricing:
+      "[claude-opus-5-5]": { input: 4.00, output: 20.00, cache-write: 5.00, cache-read: 0.20 }
+      "[claude-sonnet-5-5]": { input: 2.00, output: 10.00, cache-write: 2.50, cache-read: 0.20 }
+      "[claude-haiku-5-5]": { input: 0.10, output: 0.50, cache-write: 0.125, cache-read: 0.01 }
   sandbox:
     # When false, runs can't start. When true, the backend needs access to a Docker daemon.
     enabled: ${SANDBOX_ENABLED:false}
