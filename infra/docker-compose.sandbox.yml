@@ -1,0 +1,13 @@
+# Adds test runs to the local stack. Use with the main file:
+#   docker compose -f infra/docker-compose.yml -f infra/docker-compose.sandbox.yml up -d --build --wait
+#
+# This gives the backend control of the Docker daemon, which is the same as root on this machine.
+# It's for local development only: production uses Kubernetes Jobs (Phase 10). Sandboxes themselves
+# never get the socket.
+services:
+  backend:
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      SANDBOX_ENABLED: "true"

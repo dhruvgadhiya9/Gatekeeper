@@ -23,6 +23,9 @@
         <aws-sdk.version>2.57.8</aws-sdk.version>
         <resilience4j.version>2.4.0</resilience4j.version>
         <wiremock.version>3.13.2</wiremock.version>
+        <docker-java.version>3.7.1</docker-java.version>
+        <!-- These tests need a Docker daemon and locally built images. See the README. -->
+        <test.excludedGroups>docker-sandbox,runner-image</test.excludedGroups>
         <dependency-check.version>12.2.2</dependency-check.version>
     </properties>
 
@@ -64,6 +67,16 @@
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-spring-boot3</artifactId>
             <version>${resilience4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-core</artifactId>
+            <version>${docker-java.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-transport-httpclient5</artifactId>
+            <version>${docker-java.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -143,6 +156,13 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludedGroups>${test.excludedGroups}</excludedGroups>
+                </configuration>
             </plugin>
         </plugins>
     </build>
