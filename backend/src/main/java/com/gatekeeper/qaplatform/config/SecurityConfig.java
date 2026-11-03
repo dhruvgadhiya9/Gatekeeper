@@ -16,6 +16,12 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import com.gatekeeper.qaplatform.run.TestRunRepository;
+import com.gatekeeper.qaplatform.run.runner.JobTokenAuthenticationFilter;
+import com.gatekeeper.qaplatform.run.runner.JobTokenService;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -52,7 +58,41 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /**
+     * Sandboxes only. A separate chain, so login cookies mean nothing here and job tokens mean
+     * nothing anywhere else. Browsers can't reach these paths, because the frontend proxy leaves them
+     * out. CSRF is off because tokens travel only in headers.
+     */
     @Bean
+    @Order(1)
+    SecurityFilterChain runnerFilterChain(
+            HttpSecurity http,
+            JobTokenService jobTokens,
+            TestRunRepository runs,
+            Clock clock,
+            ProblemResponseWriter problems)
+            throws Exception {
+        http.securityMatcher("/internal/runner/**")
+                .authorizeHttpRequests(requests -> requests.anyRequest().hasRole("RUNNER"))
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .requestCache(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
+                .exceptionHandling(errors -> errors
+                        .authenticationEntryPoint((request, response, exception) ->
+                                problems.write(response, HttpStatus.UNAUTHORIZED, "A valid job token is required."))
+                        .accessDeniedHandler((request, response, exception) ->
+                                problems.write(response, HttpStatus.FORBIDDEN, "A valid job token is required.")))
+                .addFilterBefore(
+                        new JobTokenAuthenticationFilter(jobTokens, runs, clock),
+                        UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             AuthProperties properties,

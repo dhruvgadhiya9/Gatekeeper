@@ -122,6 +122,8 @@ app:
   storage:
     # Any S3-compatible store. Leave the endpoint empty to use AWS S3.
     endpoint: ${STORAGE_ENDPOINT:}
+    # The address sandboxes use for pre-signed URLs, if it differs from the endpoint.
+    sandbox-endpoint: ${STORAGE_SANDBOX_ENDPOINT:}
     region: ${STORAGE_REGION:us-east-1}
     bucket: ${STORAGE_BUCKET:gatekeeper-artifacts}
     access-key: ${STORAGE_ACCESS_KEY}
@@ -145,6 +147,27 @@ app:
     data-center: ${ZOHO_DATA_CENTER:in}
     # Attaching files needs broad WorkDrive scopes. When false, bugs link to evidence instead.
     attachments-enabled: ${ZOHO_ATTACHMENTS_ENABLED:true}
+  sandbox:
+    # When false, runs can't start. When true, the backend needs access to a Docker daemon.
+    enabled: ${SANDBOX_ENABLED:false}
+    # Base64-encoded key of at least 256 bits, separate from the login token key.
+    job-token-secret: ${APP_JOB_TOKEN_SECRET}
+    runner-image: ${SANDBOX_RUNNER_IMAGE:gatekeeper-runner:local}
+    egress-proxy-image: ${SANDBOX_EGRESS_PROXY_IMAGE:gatekeeper-egress-proxy:local}
+    # How a sandbox reaches this backend, through its egress proxy.
+    backend-url: ${SANDBOX_BACKEND_URL:http://backend:8080}
+    # The network the egress proxy uses to reach the backend, storage and the internet.
+    outbound-network: ${SANDBOX_OUTBOUND_NETWORK:gatekeeper_default}
+    cpus: ${SANDBOX_CPUS:2}
+    memory-mb: ${SANDBOX_MEMORY_MB:6144}
+    time-limit: ${SANDBOX_TIME_LIMIT:60m}
+    # Input + output + cache writes + a tenth of cache reads, which roughly tracks cost.
+    token-budget: ${SANDBOX_TOKEN_BUDGET:5000000}
+    # Package registries and scanner data sources. The staging site, backend and storage are added per run.
+    egress-allow-list: >-
+      github.com,codeload.github.com,registry.npmjs.org,pypi.org,files.pythonhosted.org,
+      repo.maven.apache.org,repo1.maven.org,plugins.gradle.org,plugins-artifacts.gradle.org,
+      services.gradle.org,downloads.gradle.org,proxy.golang.org,sum.golang.org,api.osv.dev,semgrep.dev
   staging:
     # Comma-separated. These domains and their subdomains can never be tested.
     production-domains: ${APP_PRODUCTION_DOMAINS:}

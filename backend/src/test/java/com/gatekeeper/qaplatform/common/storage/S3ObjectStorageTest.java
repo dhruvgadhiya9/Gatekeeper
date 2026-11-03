@@ -6,6 +6,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.gatekeeper.qaplatform.config.StorageConfig;
 import com.gatekeeper.qaplatform.config.StorageProperties;
 import java.io.ByteArrayInputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -34,9 +40,10 @@ class S3ObjectStorageTest {
             .waitingFor(Wait.forHttp("/minio/health/live").forPort(9000));
 
     @Test
-    void createsBucketAndStoresObjectWithItsContentType() {
+    void createsBucketAndStoresObjectWithItsContentType() throws Exception {
         StorageProperties properties = new StorageProperties(
                 "http://" + MINIO.getHost() + ":" + MINIO.getMappedPort(9000),
+                null,
                 "us-east-1",
                 "test-bucket",
                 ACCESS_KEY,
@@ -44,8 +51,9 @@ class S3ObjectStorageTest {
                 true);
         byte[] content = {1, 2, 3, 4};
 
-        try (S3Client client = new StorageConfig().s3Client(properties)) {
-            S3ObjectStorage storage = new S3ObjectStorage(client, properties);
+        try (S3Client client = new StorageConfig().s3Client(properties);
+                S3Presigner presigner = new StorageConfig().s3Presigner(properties)) {
+            S3ObjectStorage storage = new S3ObjectStorage(client, presigner, properties);
             storage.put("a/first.png", new ByteArrayInputStream(content), content.length, "image/png");
             storage.put("a/second.png", new ByteArrayInputStream(content), content.length, "image/png");
 
@@ -54,10 +62,40 @@ class S3ObjectStorageTest {
             assertThat(stored.asByteArray()).isEqualTo(content);
             assertThat(stored.response().contentType()).isEqualTo("image/png");
 
+            assertPresignedUrlsWork(storage);
+
             storage.delete("a/first.png");
             storage.delete("a/never-existed.png");
             assertThatThrownBy(() -> client.getObjectAsBytes(request -> request.bucket("test-bucket").key("a/first.png")))
                     .isInstanceOf(NoSuchKeyException.class);
         }
+    }
+
+    /** The signature covers the size, so an upload can't be larger than what the backend approved. */
+    private static void assertPresignedUrlsWork(S3ObjectStorage storage) throws Exception {
+        HttpClient http = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
+        byte[] body = {9, 8, 7};
+        String putUrl = storage.presignPut("runs/1/results/a.bin", body.length, "application/octet-stream", Duration.ofMinutes(5));
+
+        HttpResponse<Void> oversized = http.send(
+                HttpRequest.newBuilder(URI.create(putUrl))
+                        .header("Content-Type", "application/octet-stream")
+                        .PUT(HttpRequest.BodyPublishers.ofByteArray(new byte[100]))
+                        .build(),
+                HttpResponse.BodyHandlers.discarding());
+        assertThat(oversized.statusCode()).isGreaterThanOrEqualTo(400);
+
+        HttpResponse<Void> uploaded = http.send(
+                HttpRequest.newBuilder(URI.create(putUrl))
+                        .header("Content-Type", "application/octet-stream")
+                        .PUT(HttpRequest.BodyPublishers.ofByteArray(body))
+                        .build(),
+                HttpResponse.BodyHandlers.discarding());
+        assertThat(uploaded.statusCode()).isEqualTo(200);
+
+        String getUrl = storage.presignGet("runs/1/results/a.bin", Duration.ofMinutes(5));
+        HttpResponse<byte[]> downloaded = http.send(
+                HttpRequest.newBuilder(URI.create(getUrl)).build(), HttpResponse.BodyHandlers.ofByteArray());
+        assertThat(downloaded.body()).isEqualTo(body);
     }
 }
