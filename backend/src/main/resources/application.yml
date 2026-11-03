@@ -68,6 +68,17 @@ resilience4j:
         base-config: external
       figma:
         base-config: external
+      zoho:
+        base-config: external
+      # For writes that would duplicate if repeated after an unknown outcome. A 429 means Zoho
+      # didn't process the request, so it's the only failure that's safe to repeat blindly.
+      zoho-rate-limited:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.web.client.HttpClientErrorException$TooManyRequests
   circuitbreaker:
     configs:
       external:
@@ -83,6 +94,8 @@ resilience4j:
       github:
         base-config: external
       figma:
+        base-config: external
+      zoho:
         base-config: external
 
 management:
@@ -124,6 +137,14 @@ app:
     api-version: "2026-03-10"
   figma:
     api-url: ${FIGMA_API_URL:https://api.figma.com}
+  zoho:
+    # Leave empty until the Zoho OAuth client exists. The wizard then takes typed IDs.
+    client-id: ${ZOHO_CLIENT_ID:}
+    client-secret: ${ZOHO_CLIENT_SECRET:}
+    # us, eu, in, au, jp, ca, cn, sa, uk, ae or sg
+    data-center: ${ZOHO_DATA_CENTER:in}
+    # Attaching files needs broad WorkDrive scopes. When false, bugs link to evidence instead.
+    attachments-enabled: ${ZOHO_ATTACHMENTS_ENABLED:true}
   staging:
     # Comma-separated. These domains and their subdomains can never be tested.
     production-domains: ${APP_PRODUCTION_DOMAINS:}
