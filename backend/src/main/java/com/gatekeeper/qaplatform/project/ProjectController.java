@@ -38,12 +38,15 @@ public class ProjectController {
     private final FeatureCsvParser featureCsvParser;
     private final DesignUploadService designUploadService;
     private final RepositoryAccessChecker repositoryAccess;
+    private final ZohoReferenceChecker zohoReferences;
 
     public ProjectController(
             ProjectService projectService,
             FeatureCsvParser featureCsvParser,
             DesignUploadService designUploadService,
-            RepositoryAccessChecker repositoryAccess) {
+            RepositoryAccessChecker repositoryAccess,
+            ZohoReferenceChecker zohoReferences) {
+        this.zohoReferences = zohoReferences;
         this.projectService = projectService;
         this.featureCsvParser = featureCsvParser;
         this.designUploadService = designUploadService;
@@ -56,6 +59,7 @@ public class ProjectController {
     public ProjectDetailResponse create(
             @Valid @RequestBody ProjectRequest request, @AuthenticationPrincipal AuthenticatedUser actor) {
         repositoryAccess.check(request);
+        zohoReferences.check(request);
         return projectService.create(request, actor);
     }
 
@@ -75,6 +79,7 @@ public class ProjectController {
     @PreAuthorize("hasAnyRole('ADMIN', 'QA_LEAD')")
     public ProjectDetailResponse update(@PathVariable UUID id, @Valid @RequestBody ProjectRequest request) {
         repositoryAccess.check(request);
+        zohoReferences.check(request);
         return projectService.update(id, request);
     }
 
