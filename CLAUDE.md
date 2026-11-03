@@ -11,7 +11,7 @@ report is generated.
 - **backend/** — Java 21, Spring Boot 3.x. The ONLY component that holds secrets
   and talks to external systems (GitHub, Zoho, Figma, Anthropic API, storage).
 - **runner/** — Docker image used as a disposable sandbox, one container per test
-  run. Contains: Node 20, Claude Code CLI, Playwright (Chromium, Firefox, WebKit),
+  run. Contains: Node (from the Playwright image), Claude Code CLI, Playwright (Chromium, Firefox, WebKit),
   JDK 21 + Maven + Gradle, Python 3 + pytest, Go, Semgrep, Gitleaks, OSV-Scanner,
   OWASP ZAP (baseline), axe-core. It receives only a short-lived job token. It never
   receives Zoho, GitHub App or database credentials.
@@ -91,6 +91,7 @@ com.gatekeeper.qaplatform
 - ZohoConnection(id, encryptedRefreshToken, connectedBy)
 - ZohoFieldMapping(id, portalId, kind[SEVERITY|CLASSIFICATION], gatekeeperKey, zohoOptionId)
 - ZohoIssueLink(id, projectId, fingerprint, status[PENDING|UNCERTAIN|CREATED], zohoIssueId)
+- LlmUsage(id, runId, model, upstreamStatus, inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens, billableTokens, costUsd)
 - Report(id, runId, htmlKey, pdfKey, summaryJson)
 - AuditEvent(id, actor, action, target, detailsJson, at)
 
@@ -145,6 +146,17 @@ lead as follower, and (setting) require QA_LEAD approval before creating in Zoho
   where its resolver finds a token. `AuthIntegrationTest` guards this.
 - Annotate security-relevant service methods with `@Audited`. Never put secrets in its details.
 - Runner job tokens (Phase 6) are separate from login tokens and must not be accepted as them.
+
+## Sandbox
+- `runner/` always runs Claude Code with `--bare`. Without it, hooks, settings and MCP servers in the
+  repositories under test would execute, and those repositories are untrusted.
+- `SandboxContainerSettings` holds the isolation settings. Nothing may mount a host path or the
+  Docker socket, and `DockerSandboxIsolationTest` proves the settings on real Docker.
+- Everything the sandbox reaches goes through its egress proxy. Add hosts to the allow-list only
+  when a tool can't work without them.
+- The LLM proxy forwards bodies and `anthropic-beta` unchanged, as Claude Code's gateway guide
+  requires, so it uses raw HTTP. The Java SDK is for calls the backend makes itself (Phase 8).
+- Runner image: the official Playwright base image ships Node 26. Node 20 reached end of life in 2026.
 
 ## External calls
 - Annotate public client methods with `@Retry` and `@CircuitBreaker`. Only temporary failures count,

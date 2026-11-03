@@ -15,8 +15,9 @@ report is generated.
 - Architecture and rules: `CLAUDE.md`
 - Branching and commit conventions: `CONTRIBUTING.md`
 
-**Status:** Phase 5 complete (skeleton, local environment, login, roles, audit log, project intake
-and editing, GitHub App, Figma and Zoho Projects integrations). Test runs start in Phase 6.
+**Status:** Phase 6 complete (skeleton, local environment, login, roles, audit log, project intake
+and editing, GitHub App, Figma and Zoho Projects integrations, runner sandbox and LLM proxy). The
+sandbox works, but nothing in the app starts a run until Phase 7.
 
 ## Prerequisites
 
@@ -118,6 +119,33 @@ Attaching screenshots and reports requires WorkDrive access (`WorkDrive.files.AL
 
 Disconnecting in **Settings** revokes Gatekeeper's access at Zoho.
 
+## Sandboxes
+
+Each run gets a disposable container with the testing tools and no secrets.
+
+| It gets | It never gets |
+| ------- | ------------- |
+| A job token for this run only, which stops working when the run ends | The Anthropic API key |
+| This project's test logins | Zoho, GitHub App or database credentials |
+| A read-only clone token per repository, removed after cloning | The Docker socket or any host files |
+
+Its only network route is an egress proxy that allows the staging site, the backend, storage and
+package registries. It runs as non-root on a read-only filesystem, with CPU, memory and time limits.
+Model requests go through the backend's proxy, which adds the real key, stops a run at its token
+budget (`SANDBOX_TOKEN_BUDGET`) and records usage.
+
+To enable them:
+
+```powershell
+docker build -t gatekeeper-egress-proxy:local runner/egress-proxy
+docker build -t gatekeeper-runner:local runner
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.sandbox.yml up -d --build --wait
+```
+
+Set `ANTHROPIC_API_KEY` in `infra/.env` first. **Runs cost money**: each one is billed per token, up
+to its budget. The sandbox override gives the backend control of Docker, which is the same as root
+on the machine, so use it only for local development.
+
 ## Use Figma designs
 
 Create a Figma personal access token with the **File content: Read** scope (`file_content:read`),
@@ -154,6 +182,16 @@ reads `JAVA_HOME` first.
 ```powershell
 cd backend; ./mvnw verify      # Docker must be running for the PostgreSQL tests
 cd frontend; npm test; npm run build
+```
+
+Two more test groups need locally built images. Neither spends money, because the model is simulated:
+
+```powershell
+cd backend
+# Isolation on real Docker: non-root, read-only, and the egress allow-list.
+./mvnw test -D"test.excludedGroups=" -Dgroups=docker-sandbox
+# A full run with the real runner image and Claude Code CLI. Needs Docker Desktop.
+./mvnw test -D"test.excludedGroups=" -Dgroups=runner-image
 ```
 
 ## CI

@@ -82,6 +82,8 @@ endpoint with per-run token budget and usage logging.
 
 ## Phase 7 — Run pipeline, plan approval and live progress
 ```
+Start sandboxes with RunSandboxService.launch; the runner currently only runs the
+test step, so add the planning step to runner/entrypoint.sh and a planning prompt.
 Implement the run pipeline states from CLAUDE.md with RabbitMQ consumers.
 PLANNING produces a Markdown test plan; the UI shows it with edit/approve/reject.
 RUNNING streams step progress to the UI via Server-Sent Events. Implement result
